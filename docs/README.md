@@ -19,6 +19,7 @@ Ambas apps **publican y consumen** de la misma cola de eventos en MySQL. Tres co
 | [06-flujo-consumo.md](06-flujo-consumo.md) | Cómo consumen las apps: comando por cron, retries, dead letter, idempotencia |
 | [07-infraestructura.md](07-infraestructura.md) | Docker, compose, Makefile, variables de entorno y puesta en marcha |
 | [08-referencia-codely.md](08-referencia-codely.md) | Mapeo exacto con el repo de referencia y adaptaciones a MySQL |
+| [09-plan-implementacion.md](09-plan-implementacion.md) | Plan de implementación por fases con criterios de cierre |
 
 ## Resumen rápido
 

@@ -20,6 +20,7 @@ Toda la documentación del proyecto está en [`docs/`](docs/README.md):
 6. [Flujo de consumo](docs/06-flujo-consumo.md) — cron, retries y dead letter
 7. [Infraestructura](docs/07-infraestructura.md) — Docker, compose, Makefile y puesta en marcha
 8. [Referencia Codely](docs/08-referencia-codely.md) — mapeo 1:1 con el repo de referencia y adaptaciones a MySQL
+9. [Plan de implementación](docs/09-plan-implementacion.md) — fases ordenadas con criterios de cierre
 
 ## Requisitos
 
