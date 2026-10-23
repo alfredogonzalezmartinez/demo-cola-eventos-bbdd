@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "codely-git-conventional-commit": {
+      "source": "codelytv/agent-harness",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/codely-git-conventional-commit/SKILL.md",
+      "computedHash": "15762b9173cad5c10a6de27c4bfb56b1106d5addd71339a1edfe17308aa5dcfd"
+    }
+  }
+}
