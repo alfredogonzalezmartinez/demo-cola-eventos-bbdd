@@ -4,6 +4,7 @@
 
 ```yaml
 # compose.yml (esbozo de partida; versiones/props exactas al implementar)
+# Fase 0: solo el servicio bbdd está activo; app1 y app2 se descomentan en sus fases (plan docs/09)
 services:
   bbdd:
     image: mysql:8.0.40
