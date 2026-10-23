@@ -1,0 +1,8 @@
+.local/
+# Node
+node_modules/
+# Docker env
+.env
+# Tooling
+dist/
+coverage/
