@@ -16,9 +16,9 @@ Backlog por fases con criterios de cierre. Orden pactado: **app2 primero** (copi
 
 **Objetivo**: `docker compose up` levanta los 3 contenedores con las BDs creadas.
 
-- [ ] `compose.yml` (mysql 8.0.40, app1, app2), `.env.example`, `databases/01-eventos.sql` + `02-comercio.sql`
-- [ ] `Makefile` con `up`, `down`, `sync`, `consume-a1`, `consume-a2`
-- [ ] `docs/` ya referenciadas (README raíz)
+- [x] `compose.yml` (mysql 8.0.40, app1, app2), `.env.example`, `databases/01-eventos.sql` + `02-comercio.sql`
+- [x] `Makefile` con `up`, `down`, `sync`, `consume-a1`, `consume-a2` — `sync/consume-a1/consume-a2` llegan con las Fases 2-3 (dependen del código de las apps)
+- [x] `docs/` ya referenciadas (README raíz)
 
 **Cierre**: `make up && docker exec app1 php -v` y `docker exec app2 node -v` responden; las 2 BDs existen.
 
