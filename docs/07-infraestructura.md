@@ -21,7 +21,9 @@ services:
   app2:                           # ← se implementa PRIMERO (referencia 1:1)
     build: ./app2                 # node:26 + Astro + adaptador Node (SSR)
     environment:
-      MYSQL_URL: mysql://demo:demo@bbdd:3306/     # 2 BD: eventos y comercio
+      MYSQL_URL: mysql://demo:demo@bbdd:3306/     # legado Fase 0-1; DSN por schema llegaron en Fase 2
+      MYSQL_EVENTOS_URL: mysql://demo:demo@bbdd:3306/eventos
+      MYSQL_COMERCIO_URL: mysql://demo:demo@bbdd:3306/comercio
       CRON_SECRET: <token>        # auth de /api/event-bus/consume
       CONSUME_INTERVAL_SECONDS: 30
     ports:
@@ -82,6 +84,10 @@ up:           ## levanta los 3 contenedores
 	docker compose up -d --build
 down:         ## para y borra
 	docker compose down -v
+test-db:      ## (Fase 2+) MySQL de tests, profile "test", host 3307
+	docker compose --profile test up -d --wait bbdd-test
+test:         ## (Fase 2+) tests de integración de app2 contra bbdd-test
+	cd app2 && npm run test
 consume-a2:   ## una ronda de consume en app2
 	docker exec -it app2 npm run consume-events -- '*' 10
 consume-a1:   ## una ronda de consume en app1

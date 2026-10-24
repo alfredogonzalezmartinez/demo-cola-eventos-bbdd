@@ -13,8 +13,8 @@ CREATE TABLE domain_events_to_consume (
     subscriber_name VARCHAR(255) NOT NULL,
     name            VARCHAR(255) NOT NULL,          -- nombre canónico del evento
     attributes      JSON         NOT NULL,          -- payload del evento
-    occurred_at     TIMESTAMP    NOT NULL,          -- cuándo ocurrió en el dominio
-    inserted_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,  -- cuándo se publicó
+    occurred_at     TIMESTAMP(6) NOT NULL,          -- cuándo ocurrió en el dominio
+    inserted_at     TIMESTAMP(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),  -- cuándo se publicó
     retries         INT          NOT NULL DEFAULT 0,
     is_in_dead_letter BOOLEAN    NOT NULL DEFAULT FALSE,
     PRIMARY KEY (event_id, subscriber_name),

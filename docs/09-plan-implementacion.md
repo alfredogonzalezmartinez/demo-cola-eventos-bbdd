@@ -39,9 +39,10 @@ Backlog por fases con criterios de cierre. Orden pactado: **app2 primero** (copi
 Copia desde Codely (sparse clone) y adaptación:
 
 ```bash
+mkdir -p .local && cd .local
 git clone --filter=blob:none --sparse https://github.com/CodelyTV/infrastructure_design-eventbus-db-course.git codely-ref
-cd codely-ref && git sparse-checkout set 06-to_prod/2-multiples_apps/src/contexts/shared tests/contexts/shared
-# copiar a app2/src/contexts/shared y adaptar:
+cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/contexts/shared 06-to_prod/2-multiples_apps/tests
+# copiar a app2/src/contexts/shared y adaptar (vere [08](08-referencia-codely.md)):
 ```
 
 | Fichero (referencia) | Adaptación necesaria |
@@ -54,6 +55,8 @@ cd codely-ref && git sparse-checkout set 06-to_prod/2-multiples_apps/src/context
 | `tests/*` (PostgresEventBus.test, mothers, TestDomainEvent) | adaptar a MysqlEventBus **manteniendo los mismos casos** y pasando los ficheros de jest → Vitest (tooling Vite+, ver [08](08-referencia-codely.md)) |
 
 **Cierre**: `npm run test` en verde; `publish` + `consume` contra `mysql:8.0.40` creadas por la Fase 0.
+
+> **✅ Estado (2026-10-24)**: cerrada — `make test` en verde (9/9: 8 casos del bus + sanity). Clone sparse usado en `.local/codely-ref` (gitignored); contenedor `bbdd-test` (profile `test`, host 3307, DDL de Fase 0 por init) y Make targets `test-db`/`test` añadidos. Los DSN de test viven en `app2/.env.test`, cargados por `tests/setup-env.ts` con prioridad sobre el entorno heredado. `MysqlConnection` usa una conexión por schema con DSN (`MYSQL_EVENTOS_URL`, `MYSQL_COMERCIO_URL`); tablas calificadas `eventos.` vía fragmentos raw. En los tests el routing se sincroniza antes de cada caso (mismo mecanismo `INSERT IGNORE` que `sync-domain-events-routing` de la Fase 3) porque el `truncateAll` limpia también `domain_events_routing`. La DDL de la cola pasó a `TIMESTAMP(6)` para conservar la precisión de `timestamptz` (igualdad de `occurred_at` en tests); docs/04 actualizado.
 
 ## Fase 3 · Consumo y routing app2
 

@@ -27,3 +27,5 @@ Lee `docs/` de forma perezosa y por tarea: empieza por la fila que aplique, y so
 - La cola vive en BD `eventos`; el dominio en `comercio`. MySQL 8.0.40 (TZ UTC) ya está fijado — cualquier cambio pasa por actualizar los docs.
 - app2 primero (copia 1:1 de la referencia); app1 replica el modelo en PHP.
 - Especificaciones sensibles y notas del usuario: `.local/` (gitignored) — mirar ahí si falta contexto del enunciado.
+- Decisiones del usuario: cuando haya varias opciones viables (2+) en una decisión de diseño, plantearla con la herramienta de preguntas interactivas (`question`), recomendación primero; excepto cuando el usuario pida explícitamente el grill en texto (formato Q1/Q2...).
+- Comentarios en código y ficheros de config: sólo si explican algo no deducible (el *porqué*, decisiones con enlace a la doc del tema, advertencias puntuales). Fuera: referencias a fases del plan, narrativa de progreso o estados ("llegan con la Fase X", "cerrado en la Fase Y") — eso vive en la doc y en `docs/09`.

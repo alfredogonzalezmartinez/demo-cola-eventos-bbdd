@@ -18,11 +18,31 @@ services:
       retries: 20
     restart: unless-stopped
 
-  app2:                           # ← Fase 1 (docs/09): Astro SSR + adaptador Node
+  # MySQL exclusivo de tests de integración (profile "test": no arranca con `make up`).
+  # DDL de la cola vía initdb, host 3307, volumen propio
+  bbdd-test:
+    image: mysql:8.0.40
+    profiles: ["test"]
+    container_name: bbdd-test
+    env_file: .env
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_0900_ai_ci
+      - --default-time-zone=+00:00
+    ports:
+      - "3307:3306"
+    volumes:
+      - bbdd_test_data:/var/lib/mysql
+      - ./databases:/docker-entrypoint-initdb.d:ro
+    restart: unless-stopped
+
+  app2:                           # Astro SSR + adaptador Node (ver docs/07)
     container_name: app2          # Makefile/docs: docker exec app2 …
     build: ./app2
     environment:
       MYSQL_URL: mysql://demo:demo@bbdd:3306/     # 2 BD: eventos y comercio
+      MYSQL_EVENTOS_URL: mysql://demo:demo@bbdd:3306/eventos
+      MYSQL_COMERCIO_URL: mysql://demo:demo@bbdd:3306/comercio
       CRON_SECRET: ${CRON_SECRET}
     ports:
       - "${APP2_HOST_PORT:-4321}:4321"
@@ -34,8 +54,9 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-# Fase 0 ya acompletada: bbdd activo; app2 activo desde Fase 1; app1 se descomenta en Fase 6
+# app1 se añadirá a compose en su momento (ver docs/09-plan-implementacion.md)
 
 volumes:
   mysql_data:
+  bbdd_test_data:        # datos del MySQL de tests (profile test)
   app2_node_modules:      # shadow del bind ./app2: persiste node_modules de la imagen node:26-slim

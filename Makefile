@@ -1,10 +1,10 @@
-# Fase 0: solo infraestructura de BBDD. Los targets de consume/sync llegan en Fases 3+ (app2) y 6 (app1).
+# Infra de la demo. Los targets de consume/sync aparecen cuando llegue el código de las apps (docs/09).
 .DEFAULT_GOAL := help
 
 -include .env
 export
 
-.PHONY: help up down restart rebuild logs ps
+.PHONY: help up down restart rebuild logs ps test-db test
 
 help: ## Muestra los targets disponibles
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -22,3 +22,10 @@ logs: ## Sigue los logs de los contenedores
 
 ps: ## Estado de los servicios
 	docker compose ps
+
+# ── Tests de integración ──────────────────────────────────────────────────
+test-db: ## Levanta el MySQL de tests (profile test, host 3307)
+	docker compose --profile test up -d --wait bbdd-test
+
+test: test-db ## Tests de integración de app2 contra bbdd-test (DSN desde app2/.env.test)
+	cd app2 && npm run test
