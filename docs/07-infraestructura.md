@@ -53,6 +53,11 @@ Montados como `/docker-entrypoint-initdb.d`, se ejecutan en orden al crear el vo
 
 > En MySQL el entrada `/docker-entrypoint-initdb.d` acepta varios `.sql` con `CREATE DATABASE … USE …` dentro para poblar las dos BDs en un solo motor.
 
+### Inspección del estado
+
+- Estado y UIs: `npm run db` (raíz del repo) — monitor en vivo: panel de texto (sin caja) con filas estables `✓`(arriba, verde) / spinner (arrancando) / `✗`(no arranca), con nombre del schema en negrita y su URL de Drizzle Studio siempre con puerto (`https://local.drizzle.studio?port=4983` eventos / `?port=4984` comercio, clicable solo si la terminal soporta OSC 8). Sonda las dos BDs (carga `.env`; el DSN de compose (`bbdd`) no es resoluble desde el host y el `getaddrinfo` puede colgar ~90s, así que cada sonda corre contra reloj y si se pasa cae a `localhost`, que recuerda). Si una UI cae la relanza (3 intentos → fila `✗` y, debajo del panel, línea de error `✗ <bd> — no arranca la UI (N intentos) — revisa .local/logs/studio-<bd>.log`; reintento en segundo plano cada 30s, si recupera la fila vuelve a `✓`). Los logs de las instancias viven en `.local/logs/studio-<bd>.log` (también usados por `studio.sh`). Al salir (Ctrl+C) limpia el panel y muestra `Deteniendo monitor de base de datos…` con spinner y `✓ Detenido monitor de base de datos` (apagando **todas** las UIs, incluidas residuales de `studio.sh`). Con `--once` hace una sola pasada de estado, sin gestionar studios (exit 1 con errores). Estilado con `node:util` `styleText` (color/negritas), `terminal-link`+`supports-hyperlinks` (enlaces), `log-update` (redibujo en sitio) y `spinners` de `ora` (animación) — devDependencies de la raíz.
+- UI web: `npx drizzle-kit studio` por esquema con las configs y schemas de `scripts/db/` (usa el `drizzle-kit` de la raíz; `studio.sh eventos|comercio` para lanzarlas a mano): eventos→4983 en https://local.drizzle.studio y comercio→4984 en https://local.drizzle.studio?port=4984. Los snapshot `out/` que genera drizzle-kit van a `.local/drizzle/` (gitignored — no se mantienen migraciones).
+
 ## Tareas periódicas (cron)
 
 Ambas apps necesitan dos **tareas** que se invocan cada X segundos (arquitectura de scheduler del host o dentro del contenedor — indiferente para la demo):

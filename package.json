@@ -1,0 +1,18 @@
+{
+	"name": "demo-cola-eventos-bbdd",
+	"private": true,
+	"description": "Demo de un sistema de eventos de dominio en base de datos consumido por dos aplicaciones distintas",
+	"type": "module",
+	"scripts": {
+		"db": "node --env-file-if-exists=.env scripts/db.mjs"
+	},
+	"devDependencies": {
+		"drizzle-kit": "^0.31.11",
+		"drizzle-orm": "^0.45.4",
+		"log-update": "^8.0.0",
+		"mysql2": "^3.24.6",
+		"ora": "^9.4.1",
+		"supports-hyperlinks": "^4.6.0",
+		"terminal-link": "^5.0.0"
+	}
+}
