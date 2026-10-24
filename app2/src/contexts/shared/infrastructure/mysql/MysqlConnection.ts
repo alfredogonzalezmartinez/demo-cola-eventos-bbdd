@@ -1,4 +1,5 @@
-import mysql, { Pool, RowDataPacket, ResultSetHeader } from "mysql2/promise";
+import mysql from "mysql2/promise";
+import type { Pool, RowDataPacket, ResultSetHeader } from "mysql2/promise";
 
 export type Row = RowDataPacket | ResultSetHeader;
 

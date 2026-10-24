@@ -1,5 +1,5 @@
 import { DomainEvent } from "../../domain/event/DomainEvent";
-import { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
+import type { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
 
 type EventName = string;
 

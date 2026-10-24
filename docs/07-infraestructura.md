@@ -65,16 +65,16 @@ Ambas apps necesitan dos **tareas** que se invocan cada X segundos (arquitectura
 | Tarea | app2 (Node) | app1 (PHP) |
 |---|---|---|
 | Consumir eventos | `npm run consume-events [subscribers] [limit]` ⋙ `src/app/scripts/consume-mysql-events.ts` | `php bin/console events:consume [subscribers] [limit]` |
-| Sincronizar routing | `npm run sync-events-routing` ⋙ `src/app/scripts/sync-domain-events-routing.ts` | `php bin/console events:sync-routing` |
+| Sincronizar routing | `npm run sync-routing` ⋙ `src/app/scripts/sync-domain-events-routing.ts` | `php bin/console events:sync-routing` |
 
-Intervalo recomendado para la demo: `CONSUME_INTERVAL_SECONDS=30` (ambas apps iguales — se escogen por simplicidad, no es un requisito de la referencia).
+Intervalo para la demo: `CONSUME_INTERVAL_SECONDS=60` en `.env` (granularidad preceptiva de cron 1 min). El driver de la demo en el host es `make watch-consume` (bucle con docker exec — autocontenido, sin crontab compatible con cualquier SO); para rondas sueltas `make consume-a2`, y a mano `make sync`. El endpoint HTTP con Bearer es la vía para un cron real. Los scripts corren con `tsx` (Node 26 ejecuta TS en strip-only y no soporta parameter properties ni los decorators de diod).
 
 ## Endpoints HTTP expuestos (para probar sin cron)
 
 | Ruta | App | Equivalente en la referencia |
 |---|---|---|
-| `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`) | app2 (API route de Astro) | `src/pages/api/event-bus/consume.ts` |
-| `GET /api/health` → 200 | app2 (Fase 1) | `src/pages/api/health.ts` |
+| `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`) | app2 (API route de Astro) | `src/app/api/event-bus/consume/route.ts` |
+| `GET /api/health` → 200 | app2 | — |
 
 > **Mapeo de rutas Next → Astro** (decisión Fase 1): los ficheros que la referencia coloca en `src/app/**/route.ts` viven aquí como endpoints de Astro en `src/pages/api/**` (un `route.ts` Next = un `*.ts` Astro exportando `GET`/`POST`). Los scripts CLI sí mantienen la carpeta `src/app/scripts/` de la referencia (dentro de un proyecto Astro son código TS ejecutado con tsx, sin relación con el router).
 | `GET /orders` (listado con estado), `POST /orders` (checkout) | app2 | rutas `mooc/courses` del ejemplo |
@@ -93,13 +93,17 @@ test-db:      ## (Fase 2+) MySQL de tests, profile "test", host 3307
 	docker compose --profile test up -d --wait bbdd-test
 test:         ## (Fase 2+) tests de integración de app2 contra bbdd-test
 	cd app2 && npm run test
-consume-a2:   ## una ronda de consume en app2
-	docker exec -it app2 npm run consume-events -- '*' 10
-consume-a1:   ## una ronda de consume en app1
-	docker exec -it app1 php bin/console events:consume '*' 10
-sync:         ## registra (ambas apps) sus suscriptores en domain_events_routing
-	docker exec -it app2 npm run sync-events-routing
-	docker exec -it app1 php bin/console events:sync-routing
+sync:         ## inscribe los suscriptores declarados en domain_events_routing (app2 hoy; incluirá app1)
+	docker exec app2 npm run sync-routing
+consume-a2:   ## una ronda de consume en app2 (SUBSCRIBERS=* LIMIT=10)
+	docker exec app2 npm run consume-events -- "$(SUBSCRIBERS)" "$(LIMIT)"
+watch-consume: ## bucle de consume en app2 cada CONSUME_INTERVAL_SECONDS (Ctrl+C para parar)
+	while true; do \
+		docker exec app2 npm run consume-events -- "$(SUBSCRIBERS)" "$(LIMIT)"; \
+		sleep "$(CONSUME_INTERVAL_SECONDS)"; \
+	done
+consume-a1:   ## (con app1) una ronda de consume en app1
+	docker exec app1 php bin/console events:consume '*' 10
 ```
 
 ## Puesta en marcha de la demo (chuleta)

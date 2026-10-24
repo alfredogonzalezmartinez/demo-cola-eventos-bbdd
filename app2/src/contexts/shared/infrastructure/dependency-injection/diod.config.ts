@@ -3,7 +3,7 @@ import "reflect-metadata";
 import { ContainerBuilder } from "diod";
 
 import { DomainEvent } from "../../domain/event/DomainEvent";
-import { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
+import type { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
 import { EventBus } from "../../domain/event/EventBus";
 import { UuidGenerator } from "../../domain/UuidGenerator";
 

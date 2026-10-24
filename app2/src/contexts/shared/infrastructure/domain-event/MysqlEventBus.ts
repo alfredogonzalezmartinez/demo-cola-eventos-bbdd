@@ -1,8 +1,8 @@
 /* eslint-disable no-await-in-loop,no-console */
-import { json, MysqlConnection, raw, SqlExecutor } from "../mysql/MysqlConnection";
+import { json, MysqlConnection, raw, type SqlExecutor } from "../mysql/MysqlConnection";
 
-import { DomainEvent, DomainEventAttributes } from "../../domain/event/DomainEvent";
-import { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
+import { type DomainEvent, type DomainEventAttributes } from "../../domain/event/DomainEvent";
+import type { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
 import { EventBus } from "../../domain/event/EventBus";
 import { retry } from "../../domain/retry";
 

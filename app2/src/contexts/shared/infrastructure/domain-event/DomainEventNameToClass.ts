@@ -1,6 +1,6 @@
-import { DomainEvent } from "../../domain/event/DomainEvent";
-import { DomainEventClass } from "../../domain/event/DomainEventClass";
-import { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
+import type { DomainEvent } from "../../domain/event/DomainEvent";
+import type { DomainEventClass } from "../../domain/event/DomainEventClass";
+import type { DomainEventSubscriber } from "../../domain/event/DomainEventSubscriber";
 
 type EventName = string;
 

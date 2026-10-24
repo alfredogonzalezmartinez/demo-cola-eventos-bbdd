@@ -62,11 +62,13 @@ cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/context
 
 **Objetivo**: la cola se consume y el routing se inscribe, con cron externo.
 
-- [ ] `src/app/scripts/consume-mysql-events.ts` (args `subscribers limit`) y `sync-domain-events-routing.ts` — análogos del repo
-- [ ] API route `GET /api/event-bus/consume` con Bearer `CRON_SECRET`
-- [ ] Script de cron del host (o make target) que dispara cada intervalo; por defecto cada 60 s (granularidad mínima de cron)
+- [x] `src/app/scripts/consume-mysql-events.ts` (args `subscribers limit`) y `sync-domain-events-routing.ts` — análogos del repo
+- [x] API route `GET /api/event-bus/consume` con Bearer `CRON_SECRET`
+- [x] Script de cron del host (o make target) que dispara cada intervalo; por defecto cada 60 s (granularidad mínima de cron)
 
 **Cierre**: tras publicar un evento "de prueba", una pasada del consume lo borra/deja en `retries` según el resultado.
+
+> **✅ Estado (2026-10-24)**: cerrada — scripts portados 1:1 (`consume-events`/`sync-routing` con tsx, devDep de app2) y endpoint Astro equivalente (`src/pages/api/event-bus/consume.ts`, mínimo estilo `health.ts`: 401 sin Bearer, 200 vacío, 500 en error). Make targets `sync`, `consume-a2` y `watch-consume` (bucle por `CONSUME_INTERVAL_SECONDS`, default 60). Demo del cierre manual con suscriptores temporales no commiteados vía el camino real `make sync` → publish(bs) → `make consume-a2`: la fila del suscriptor ok se borró, y la del que lanza acumuló retries 1→2→3 con dead letter al 3.er fallo (una 4.ª ronda no la reintenta). Descubrimientos clave: Node 26 corre TS en strip-only y rechaza parameter properties ⇒ tsx; `verbatimModuleSyntax` de Astro expuso imports de tipos sin `import type` (y tipos exportados de `mysql2/promise`) que Vite no link-estricta pero tsx sí; los decorators de diod (`@Service`) exigen `experimentalDecorators: true` en el tsconfig de app2 para la SSR de Vite (instalación de `tsx` en el contenedor: `docker exec app2 npm install` — node_modules es un volumen shadow). Los runs del bus quedan cubiertos por la suite (9/9, verdes).
 
 ## Fase 4 · Dominio `commerce` app2 + UI
 

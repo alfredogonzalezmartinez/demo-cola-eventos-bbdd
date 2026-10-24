@@ -22,6 +22,8 @@ Como en la referencia, cada app tiene **su propio gancho**:
 
 > En la demo **ambas apps consumen sus eventos** con el mismo mecanismo. `subscribers = *` dentro de una app igual consumiría los de la otra (por diseño — un solo modelo); en la demo se filtra por suscriptores de cada app: los de app1 en app1, los de app2 en app2 (ver tabla de suscriptores en [04-modelo-eventos.md](04-modelo-eventos.md#los-suscriptores)).
 
+Driver de la demo (host): `make watch-consume` (bucle cada `CONSUME_INTERVAL_SECONDS`, default 60) o rondas sueltas con `make consume-a2 [SUBSCRIBERS=... LIMIT=...]`; el routing se inscribe a mano con `make sync` (`INSERT IGNORE` idempotente). El endpoint del detalle en [07](07-infraestructura.md#endpoints-http-expuestos-para-probar-sin-cron) queda para un cron real. Los scripts y el endpoint de app2 aceptan `subscribers` (CSV o `*`) y `limit` con los mismos defaults que la referencia.
+
 ## Comportamiento de una ronda (idéntico a la referencia)
 
 ```
@@ -57,8 +59,8 @@ consume(subscribers, limit)
   - El **nº de intentos** máximo es **3** (`MAX_RETRIES = 3` — constante de la referencia, replicada).
   - Tras 3 intentos fallidos: `is_in_dead_letter = true` y el evento queda ahí **para auditoría/post-mortem**, ya no se reintentará nunca.
   - **No hay** implementado en la referencia (ni por tanto en la demo) un visualizador/reprocesador de la dead letter — queda documentado como posible mejora.
-- **Orden**: `ORDER BY inserted_at ASC` — FIFO por momento de publicación. *No* hay orden global por agregado ni por aplicación: es lo que la referencia no ofrece y la demo tampoco.
-- **`limit`**: controla cuánto trabajo consume el comando en cada tick, no el tamaño de la cola.
+- **Orden**: `ORDER BY inserted_at ASC` — FIFO por momento de publicación. *No* hay orden global por agregado ni por aplicación: es lo que la referencia no ofrece y la demo tampoco.- **`limit`**: controla cuánto trabajo consume el comando en cada tick, no el tamaño de la cola.
+- **El sync del routing es insert-only** (1:1 con la referencia): si se retira un suscriptor, su fila de `domain_events_routing` queda huérfana. `publish()` seguirá encolando para él; en el consume se loguea `❌ Unknown subscriber` y la fila de la cola queda sin decada nunca (no marca error ni dead letter). No se poda por diseño: un sync de una app no puede saber qué filas de routing pertenecen a la otra, y podar globalmente borraría las inscripciones de la otra app. Para retirar suscriptores en la demo: borrar sus filas de routing/cola a mano por SQL.
 
 ## Casos borde (según lo que hace la referencia)
 
