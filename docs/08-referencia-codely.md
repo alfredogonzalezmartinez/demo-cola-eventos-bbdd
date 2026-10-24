@@ -16,7 +16,7 @@ Todo el sistema de eventos de `src/contexts/shared/` — sin cambios salvo el dr
 | `InMemoryEventBus` | `.../infrastructure/domain-event/InMemoryEventBus.ts` | idéntica (tests unitarios) |
 | `AggregateRoot` (+ `pullDomainEvents`) | `.../domain/AggregateRoot.ts` | idéntico |
 | Contenedor DI con **diod** + tag `subscriber` | `.../dependency-injection/diod.config.ts` | ídem |
-| API route de consumo con Bearer + script CLI de consume + script sync-routing | `src/app/api/event-bus/consume/route.ts`, `src/app/scripts/*` | iguales, apuntando a MysqlEventBus |
+| API route de consumo con Bearer + script CLI de consume + script sync-routing | `src/app/api/event-bus/consume/route.ts`, `src/app/scripts/*` | mismas rutas, mapeadas a Astro: `src/pages/api/event-bus/consume.ts`, scripts en `src/app/scripts/*`, apuntando a MysqlEventBus |
 
 ## Ejecutables de la referencia ( Scripts)
 
@@ -38,6 +38,7 @@ Todo el sistema de eventos de `src/contexts/shared/` — sin cambios salvo el dr
 | Escenario | `users` registrados → emails + sugerencias LLM; `courses` | **e-commerce** | decisión del equipo ([02-escenario-demo.md](02-escenario-demo.md)) |
 | Eventos | `user_registered_domain_event`, `welcome_email_sent_domain_event`… | `order_created`, `product_viewed`, `order_confirmed`, `order_shipped` (prefijo contexto) | idéntico mecanismo |
 | LLM como proveedor de contenido | Sí (CoursesSuggestionLlm) | No | fuera del alcance de la demo |
+| Tooling test/lint | jest + eslint | **Vite+ (`vp`)**: `vp test` (Vitest) + `vp check` (Oxlint/Oxfmt) | decisión Fase 1; la Fase 2 adaptará los tests jest→Vitest conservando los mismos casos |
 
 ## Escritura ejecutables del modelo con otros datos (referencia exacta)
 

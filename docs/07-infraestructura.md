@@ -66,7 +66,10 @@ Intervalo recomendado para la demo: `CONSUME_INTERVAL_SECONDS=30` (ambas apps ig
 
 | Ruta | App | Equivalente en la referencia |
 |---|---|---|
-| `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`) | app2 (API route de Astro) | `src/app/api/event-bus/consume/route.ts` |
+| `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`) | app2 (API route de Astro) | `src/pages/api/event-bus/consume.ts` |
+| `GET /api/health` → 200 | app2 (Fase 1) | `src/pages/api/health.ts` |
+
+> **Mapeo de rutas Next → Astro** (decisión Fase 1): los ficheros que la referencia coloca en `src/app/**/route.ts` viven aquí como endpoints de Astro en `src/pages/api/**` (un `route.ts` Next = un `*.ts` Astro exportando `GET`/`POST`). Los scripts CLI sí mantienen la carpeta `src/app/scripts/` de la referencia (dentro de un proyecto Astro son código TS ejecutado con tsx, sin relación con el router).
 | `GET /orders` (listado con estado), `POST /orders` (checkout) | app2 | rutas `mooc/courses` del ejemplo |
 | Rutas del back-office (confirmar/enviar pedido, alta de productos) | app1 | — |
 | `$ php bin/console events:consume` | app1 | equivalente CLI |

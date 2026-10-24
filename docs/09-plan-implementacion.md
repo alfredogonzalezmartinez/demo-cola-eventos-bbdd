@@ -26,9 +26,9 @@ Backlog por fases con criterios de cierre. Orden pactado: **app2 primero** (copi
 
 **Objetivo**: Astro con adaptador Node levanta SSR y una ruta de API dummy.
 
-- [ ] Proyecto en `app2/` con `@astrojs/node`, express-style API route `src/app/api/health`
-- [ ] Estructura `src/contexts/{shared,commerce}` vacía preparada
-- [ ] Node 26 (`.nvmrc`/`engines`), jest + eslint como la referencia
+- [x] Proyecto en `app2/` con `@astrojs/node` (standalone), express-style API route `src/pages/api/health.ts` (convención Astro; mapeo Next→Astro en [07](07-infraestructura.md#endpoints-http-expuestos-para-probar-sin-cron))
+- [x] Estructura `src/contexts/{shared,commerce}` vacía preparada
+- [x] Node 26 (`.nvmrc`/`engines`), tooling **Vite+**: `vp test` (Vitest) + `vp check` (Oxlint) vía `npx` — desviación de "jest + eslint como la referencia", detalle en [08](08-referencia-codely.md)
 
 **Cierre**: `curl localhost:4321/api/health` responde 200.
 
@@ -51,7 +51,7 @@ cd codely-ref && git sparse-checkout set 06-to_prod/2-multiples_apps/src/context
 | `shared/infrastructure/domain-event/PostgresEventBus` | → `MysqlEventBus`: JSONB→JSON, `eventos.` en lugar de `public.`, `INSERT IGNORE` en sync-routing |
 | `shared/infrastructure/domain-event/*Map*` (NameToClass, etc.) | ninguna |
 | DI `diod.config` | ninguna |
-| `tests/*` (PostgresEventBus.test, mothers, TestDomainEvent) | adaptar a MysqlEventBus **manteniendo los mismos casos** |
+| `tests/*` (PostgresEventBus.test, mothers, TestDomainEvent) | adaptar a MysqlEventBus **manteniendo los mismos casos** y pasando los ficheros de jest → Vitest (tooling Vite+, ver [08](08-referencia-codely.md)) |
 
 **Cierre**: `npm run test` en verde; `publish` + `consume` contra `mysql:8.0.40` creadas por la Fase 0.
 

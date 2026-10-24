@@ -1,0 +1,20 @@
+{
+  "name": "app2",
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro",
+    "test": "npx --package=vite-plus@1.4.0 vp test",
+    "lint": "npx --package=vite-plus@1.4.0 vp check"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.9",
+    "astro": "^7.4.2"
+  },
+  "engines": {
+    "node": ">=26.10.0 <27"
+  }
+}

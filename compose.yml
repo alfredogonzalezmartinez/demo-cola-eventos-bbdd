@@ -18,9 +18,24 @@ services:
       retries: 20
     restart: unless-stopped
 
-# Fases siguientes añadirán aquí los servicios de las apps:
-#   - Fase 1/4: app2 (node:26 + Astro SSR)
-#   - Fase 6:   app1 (php:8.3 + Symfony)
+  app2:                           # ← Fase 1 (docs/09): Astro SSR + adaptador Node
+    container_name: app2          # Makefile/docs: docker exec app2 …
+    build: ./app2
+    environment:
+      MYSQL_URL: mysql://demo:demo@bbdd:3306/     # 2 BD: eventos y comercio
+      CRON_SECRET: ${CRON_SECRET}
+    ports:
+      - "${APP2_HOST_PORT:-4321}:4321"
+    volumes:
+      - ./app2:/app
+      - app2_node_modules:/app/node_modules      # shadow del bind: usa node de la imagen
+    depends_on:
+      bbdd:
+        condition: service_healthy
+    restart: unless-stopped
+
+# Fase 0 ya acompletada: bbdd activo; app2 activo desde Fase 1; app1 se descomenta en Fase 6
 
 volumes:
   mysql_data:
+  app2_node_modules:      # shadow del bind ./app2: persiste node_modules de la imagen node:26-slim
