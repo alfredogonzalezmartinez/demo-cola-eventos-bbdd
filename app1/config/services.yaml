@@ -1,0 +1,65 @@
+parameters:
+    # DSN por defecto de desarrollo (nombres de host de compose, docs/07)
+    default_eventos_dsn: 'mysql://demo:demo@bbdd:3306/eventos'
+    default_comercio_dsn: 'mysql://demo:demo@bbdd:3306/comercio'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+
+    # ── Conexiones: una conexión por BD (docs/07) ──────────────────────────
+    App\Shared\Infrastructure\Persistence\DoctrineConnection:
+        arguments:
+            $dsn: '%env(default:default_eventos_dsn:EVENTOS_DSN)%'
+
+    App\Shared\Infrastructure\Persistence\ComercioDoctrineConnection:
+        arguments:
+            $dsn: '%env(default:default_comercio_dsn:COMERCIO_DSN)%'
+
+    # ── Bus de eventos sobre la cola (docs/04-06) ──────────────────────────
+    App\Shared\Infrastructure\DomainEvent\MysqlDoctrineEventBus:
+        arguments:
+            $subscribers: !tagged_iterator subscriber
+
+    App\Shared\Domain\Event\EventBus: '@App\Shared\Infrastructure\DomainEvent\MysqlDoctrineEventBus'
+
+    # ── Dominio `ops`: repositorios de lectura sobre `comercio` ────────────
+    App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrdersRepository: ~
+    App\Ops\Products\Infrastructure\Persistence\MysqlDoctrineProductsRepository: ~
+
+    App\Ops\Orders\Domain\OrdersRepository: '@App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrdersRepository'
+    App\Ops\Products\Domain\ProductsRepository: '@App\Ops\Products\Infrastructure\Persistence\MysqlDoctrineProductsRepository'
+
+    App\Ops\Orders\Application\ConfirmOrder: ~
+    App\Ops\Orders\Application\ShipOrder: ~
+
+    # ── Suscriptores: el tag `subscriber` alimenta el sync-routing y el bus
+    #    (se declara a mano, como el .addTag("subscriber") del diod de app2) ──
+    App\Ops\Orders\Infrastructure\EventSubscriber\OrderConfirmationEmail:
+        tags: [{ name: 'subscriber' }]
+
+    App\Ops\Products\Infrastructure\EventSubscriber\ProductStats:
+        tags: [{ name: 'subscriber' }]
+
+    # ── Comandos de consola del ciclo de la cola (docs/06-07) ──────────────
+    App\Shared\Infrastructure\Console\EventsConsumeCommand:
+        arguments:
+            $eventBus: '@App\Shared\Infrastructure\DomainEvent\MysqlDoctrineEventBus'
+        tags: [{ name: 'console.command' }]
+
+    App\Shared\Infrastructure\Console\EventsSyncRoutingCommand:
+        arguments:
+            $subscribers: !tagged_iterator subscriber
+        tags: [{ name: 'console.command' }]
+
+    # ── Web mínima: UI de ops + endpoint de consume (docs/07) ──────────────
+    App\Ops\Orders\Infrastructure\Controller\OrdersController:
+        tags: ['controller.service_arguments']
+
+    App\Ops\Products\Infrastructure\Controller\ProductsController:
+        tags: ['controller.service_arguments']
+
+    App\Shared\Infrastructure\Controller\EventBusConsumeController:
+        tags: ['controller.service_arguments']
+

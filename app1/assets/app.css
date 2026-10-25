@@ -1,0 +1,6 @@
+/* Único punto de entrada de estilos: Tailwind 4 (CLI) procesa aquí */
+@import "tailwindcss";
+
+/* Las clases de Tailwind viven en strings PHP de los controllers: el escaneo
+ * de contenido por defecto no cubriría nada en app1, así que apuntamos a src */
+@source "./src";

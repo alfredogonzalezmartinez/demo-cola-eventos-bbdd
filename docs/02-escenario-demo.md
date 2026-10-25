@@ -103,6 +103,7 @@ CREATE TABLE order_status_history (
     id CHAR(36) PRIMARY KEY NOT NULL,
     order_id CHAR(36) NOT NULL,
     status VARCHAR(50) NOT NULL,
-    changed_at TIMESTAMP NOT NULL
+    tracking_number VARCHAR(255) NULL,   -- nº seguimiento, sólo en la fila de `shipped`
+    changed_at TIMESTAMP(6) NOT NULL
 );
 ```

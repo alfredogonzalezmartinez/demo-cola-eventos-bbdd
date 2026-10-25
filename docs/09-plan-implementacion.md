@@ -92,14 +92,16 @@ cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/context
 
 **Objetivo**: la otra pata del contrato: consumidores y publicador.
 
-- [ ] Bundle `shared` en PHP: `DomainEvent`, `EventBus` (interfaz), `MysqlDoctrineEventBus` (o sobre PDO), atributo/interfaz `DomainEventSubscriber`
-- [ ] Sistema de tagging del DI por `subscriber` + comando `events:sync-routing`
-- [ ] Comando `events:consume` con el mismo algoritmo (SKIP LOCKED, retries=3, dead letter)
-- [ ] Suscriptores: `OrderConfirmationEmail` (order_created) y `ProductStats` (product_viewed) de app1, y `UpdateOrderStatus` de app2 (`order_confirmed`, `order_shipped`; aplazado aquí desde la Fase 4, ver [04](04-modelo-eventos.md#los-suscriptores))
-- [ ] Publicador de `ops.order_confirmed` / `ops.order_shipped` (back-office mínimo: comandos de consola sirven como UI de la demo)
-- [ ] Tests en PHP con el mismo enfoque (MySQL real de test)
+- [x] Bundle `shared` en PHP: `DomainEvent`, `EventBus` (interfaz), `MysqlDoctrineEventBus` (o sobre PDO), atributo/interfaz `DomainEventSubscriber`
+- [x] Sistema de tagging del DI por `subscriber` + comando `events:sync-routing`
+- [x] Comando `events:consume` con el mismo algoritmo (SKIP LOCKED, retries=3, dead letter)
+- [x] Suscriptores: `OrderConfirmationEmail` (order_created) y `ProductStats` (product_viewed) de app1, y `UpdateOrderStatus` de app2 (`order_confirmed`, `order_shipped`; aplazado aquí desde la Fase 4, ver [04](04-modelo-eventos.md#los-suscriptores))
+- [x] Publicador de `ops.order_confirmed` / `ops.order_shipped` (back-office mínimo: comandos `ops:orders:confirm|ship` y botones web equivalentes)
+- [x] Tests en PHP con el mismo enfoque (MySQL real de test)
 
 **Cierre**: `php bin/console events:consume` procesa los eventos publicados por app2 (emails mocked) y app1 publica `order_confirmed`.
+
+> **✅ Estado (2026-10-25)**: cerrada — app1 completa en Symfony (PHP 8.3, MicroKernelTrait sin twig) y demo E2E de cierre verde en ambos sentidos: botón "Confirmar" en app1 → cola → `npm run consume-events` de app2 deja el pedido en `confirmed` con fila en `order_status_history` (tracking NULL); botón "Enviar" → `shipped` con tracking `PLK-#####` autogenerado; y a la inversa `product_viewed` (SSR de app2) → `events:consume` de app1 sube `views` (visible en `/products`). Semántica fail-fast verificada: re-confirmar un pedido `shipped` devuelve 500 sin publicar. Suite PHP del bus en verde (8 tests, 20 assertions) con `RetryingConnectionTestDouble` que simula los reintentos sin conectar; `make test` corre las dos suites. Decisiones: estructura hexagonal espejo de app2 (`src/Shared`, `src/Commerce` inbound, `src/Ops`), doctrine/dbal **standalone sin ORM** con envs `EVENTOS_DSN`/`COMERCIO_DSN` cuyo DSN se parsea a mano porque DBAL 4.5 no infiere el driver del scheme y trata `localhost` como unix socket (→ `127.0.0.1`); tag `subscriber` a mano en `services.yaml` con `!tagged_iterator` (entrega `RewindableGenerator`: conviene `iterator_to_array`); endpoint HTTP de consume con Bearer con el mismo contrato que app2. Lecciones: **(1)** las constantes `STDOUT`/`STDERR` solo existen en CLI — el primer publish desde web petó 500; se extrajo un helper `ConsoleOutput` SAPI-safe que en web delega en `error_log` (acaba en `docker logs app1`); **(2)** el `variables_order` por defecto (GPCS) no copia el entorno a `$_SERVER` en el SAPI web ⇒ autenticar con `getenv()`, no `$_SERVER[...]`; **(3)** en app2, `import type` borra el símbolo en runtime: los eventos usados como valor en `subscribedTo()` (`subscribedTo(): [OrderConfirmedDomainEvent, …]`) necesitan import de valor (`OrderConfirmedDomainEvent is not defined`); **(4)** bug real en el `toSql` de `MysqlConnection` de app2: `typeof null === "object"` hacía `"$raw" in null` al parametrizar `null` (trackingNumber opcional) — añadido el guard `value !== null`; **(5)** LIMIT parametrizado rompe builds de cláusulas (interpolado `%d`). DDL: `order_status_history.tracking_number VARCHAR(255) NULL` (aplicado a los volúmenes ya creados; `make down` y `make up` para recrear limpio). Gotchas de contenedor ya conocidos se mantienen (vendor app1 en volumen shadow ⇒ `docker exec app1 composer install` si cambia `composer.json`; `docker exec app1 sh -c 'rm -rf /app/var/cache'` para limpiar el cache que el contenedor escribe como root).
 
 ## Fase 7 · Demo end-to-end completa
 

@@ -54,9 +54,26 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-# app1 se añadirá a compose en su momento (ver docs/09-plan-implementacion.md)
+# app1 se añade en la Fase 6 (replica PHP del modelo de eventos de app2)
+  app1:
+    container_name: app1
+    build: ./app1
+    environment:
+      EVENTOS_DSN: mysql://demo:demo@bbdd:3306/eventos
+      COMERCIO_DSN: mysql://demo:demo@bbdd:3306/comercio
+      CRON_SECRET: ${CRON_SECRET}
+    ports:
+      - "${APP1_HOST_PORT:-8000}:8000"
+    volumes:
+      - ./app1:/app
+      - app1_vendor:/app/vendor       # shadow del bind: usa el vendor de la imagen
+    depends_on:
+      bbdd:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   mysql_data:
   bbdd_test_data:        # datos del MySQL de tests (profile test)
   app2_node_modules:      # shadow del bind ./app2: persiste node_modules de la imagen node:26-slim
+  app1_vendor:            # shadow del bind ./app1: persiste vendor de la imagen php:8.3-cli

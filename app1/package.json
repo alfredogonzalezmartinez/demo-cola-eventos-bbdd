@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "description": "Solo para compilar el CSS de Tailwind (public/app.css, commiteado). La app no depende de node.",
+  "scripts": {
+    "build:css": "tailwindcss -i assets/app.css -o public/app.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.1.0",
+    "tailwindcss": "^4.1.0"
+  }
+}

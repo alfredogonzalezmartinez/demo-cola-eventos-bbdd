@@ -32,10 +32,11 @@ CREATE TABLE products (
 );
 
 CREATE TABLE order_status_history (
-    id         CHAR(36) PRIMARY KEY NOT NULL,
-    order_id   CHAR(36) NOT NULL,
-    status     VARCHAR(50) NOT NULL,
-    changed_at TIMESTAMP(6) NOT NULL,
+    id              CHAR(36) PRIMARY KEY NOT NULL,
+    order_id        CHAR(36) NOT NULL,
+    status          VARCHAR(50) NOT NULL,
+    tracking_number VARCHAR(255) NULL,
+    changed_at      TIMESTAMP(6) NOT NULL,
     INDEX idx__order_status_history__order_id (order_id)
 );
 

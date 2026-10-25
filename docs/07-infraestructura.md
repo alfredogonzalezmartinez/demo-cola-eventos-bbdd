@@ -3,43 +3,47 @@
 ## Contenedores
 
 ```yaml
-# compose.yml (esbozo de partida; versiones/props exactas al implementar)
-# Fase 0: solo el servicio bbdd está activo; app1 y app2 se descomentan en sus fases (plan docs/09)
+# compose.yml — reflejo del fichero real de la raíz (a cierre de la Fase 6)
 services:
   bbdd:
     image: mysql:8.0.40
-    environment:
-      MYSQL_USER: demo
-      MYSQL_PASSWORD: demo
-      MYSQL_ROOT_PASSWORD: root
-      TZ: UTC                     # los timestamps de eventos son UTC
+    command: [--default-time-zone=+00:00]   # los timestamps de eventos son UTC
     ports:
-      - "3306:3306"
+      - "${MYSQL_HOST_PORT:-3306}:3306"
     volumes:
-      - ./databases:/docker-entrypoint-initdb.d   # DDL de arranque (ver abajo)
+      - mysql_data:/var/lib/mysql
+      - ./databases:/docker-entrypoint-initdb.d:ro
 
-  app2:                           # ← se implementa PRIMERO (referencia 1:1)
+  bbdd-test:                      # profile "test": no arranca con `make up`
+    image: mysql:8.0.40
+    ports: ["3307:3306"]          # el host corre aquí las suites de test
+
+  app2:
     build: ./app2                 # node:26 + Astro + adaptador Node (SSR)
     environment:
-      MYSQL_URL: mysql://demo:demo@bbdd:3306/     # legado Fase 0-1; DSN por schema llegaron en Fase 2
       MYSQL_EVENTOS_URL: mysql://demo:demo@bbdd:3306/eventos
       MYSQL_COMERCIO_URL: mysql://demo:demo@bbdd:3306/comercio
-      CRON_SECRET: <token>        # auth de /api/event-bus/consume
-      CONSUME_INTERVAL_SECONDS: 30
+      CRON_SECRET: ${CRON_SECRET}    # auth de /api/event-bus/consume
     ports:
-      - "4321:4321"
-    depends_on:
-      - bbdd
+      - "${APP2_HOST_PORT:-4321}:4321"
+    volumes:
+      - ./app2:/app
+      - app2_node_modules:/app/node_modules   # shadow del bind
 
-  app1:                          # replica PHP del mismo modelo de eventos
-    build: ./app1                # php:8.3 + Symfony
+  app1:                           # replica PHP del mismo modelo de eventos
+    build: ./app1                 # php:8.3-cli + pdo_mysql + composer
     environment:
-      DATABASE_URL: mysql://demo:demo@bbdd:3306/eventos   # bus; `comercio` según repositorios
-      CONSUME_INTERVAL_SECONDS: 30
+      EVENTOS_DSN: mysql://demo:demo@bbdd:3306/eventos
+      COMERCIO_DSN: mysql://demo:demo@bbdd:3306/comercio
+      CRON_SECRET: ${CRON_SECRET}
     ports:
-      - "8000:8000"
+      - "${APP1_HOST_PORT:-8000}:8000"   # `php -S 0.0.0.0:8000 -t public public/router.php`
+    volumes:
+      - ./app1:/app
+      - app1_vendor:/app/vendor    # shadow del bind
     depends_on:
-      - bbdd
+      bbdd:
+        condition: service_healthy
 ```
 
 ## Bases de datos y arranque (databases/)
@@ -69,7 +73,7 @@ Ambas apps necesitan dos **tareas** que se invocan cada X segundos (arquitectura
 | Consumir eventos | `npm run consume-events [subscribers] [limit]` ⋙ `src/app/scripts/consume-mysql-events.ts` | `php bin/console events:consume [subscribers] [limit]` |
 | Sincronizar routing | `npm run sync-routing` ⋙ `src/app/scripts/sync-domain-events-routing.ts` | `php bin/console events:sync-routing` |
 
-Intervalo para la demo: `CONSUME_INTERVAL_SECONDS=60` en `.env` (granularidad preceptiva de cron 1 min). El driver de la demo en el host es `make watch-consume` (bucle con docker exec — autocontenido, sin crontab compatible con cualquier SO); para rondas sueltas `make consume-a2`, y a mano `make sync`. El endpoint HTTP con Bearer es la vía para un cron real. Los scripts corren con `tsx` (Node 26 ejecuta TS en strip-only y no soporta parameter properties ni los decorators de diod).
+Intervalo para la demo: `CONSUME_INTERVAL_SECONDS=60` en `.env` (granularidad preceptiva de cron 1 min). El driver de la demo en el host es `make watch-consume` / `make watch-consume-a1` (bucle con docker exec — autocontenido, sin crontab compatible con cualquier SO); para rondas sueltas `make consume-a2` / `make consume-a1`, y a mano `make sync` (ambas apps, en ese orden: primero app2, porque sus suscriptores también inscriben los eventos que publica app1). El endpoint HTTP con Bearer es la vía para un cron real. Los scripts de app2 corren con `tsx` (Node 26 ejecuta TS en strip-only y no soporta parameter properties ni los decorators de diod).
 
 ## Endpoints HTTP expuestos (para probar sin cron)
 
@@ -77,45 +81,47 @@ Intervalo para la demo: `CONSUME_INTERVAL_SECONDS=60` en `.env` (granularidad pr
 |---|---|---|
 | `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`) | app2 (API route de Astro) | `src/app/api/event-bus/consume/route.ts` |
 | `GET /api/health` → 200 | app2 | — |
+| `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`), mismo contrato | app1 (controller Symfony) | — |
 
 > **Mapeo de rutas Next → Astro** (decisión Fase 1): los ficheros que la referencia coloca en `src/app/**/route.ts` viven aquí como endpoints de Astro en `src/pages/api/**` (un `route.ts` Next = un `*.ts` Astro exportando `GET`/`POST`). Los scripts CLI sí mantienen la carpeta `src/app/scripts/` de la referencia (dentro de un proyecto Astro son código TS ejecutado con tsx, sin relación con el router).
-| `GET /orders` (listado con estado), `POST /orders` (checkout) | app2 | rutas `mooc/courses` del ejemplo |
-| Rutas del back-office (confirmar/enviar pedido, alta de productos) | app1 | — |
-| `$ php bin/console events:consume` | app1 | equivalente CLI |
-| (opcional) endpoint protegido en Symfony, mismo contrato url/params que app2 | app1 | de referencia */
 
-## Comandos make (Makefile de partida)
+## Web mínima (la UI de la demo)
+
+| Ruta | App | Qué muestra |
+|---|---|---|
+| `/` (tienda), `/checkout`, `/orders` | app2 (Astro SSR, :4321) | checkout publica `order_created`; `products/[id]` publica `product_viewed` por render |
+| `GET /orders` + `POST /orders/{id}/confirm` y `/orders/{id}/ship` | app1 (back-office, :8000) | botones que publican `order_confirmed` / `order_shipped` (equivale a los comandos `ops:orders:confirm|ship`) |
+| `GET /products` | app1 | panel read-only de productos con las `views` que sube el consumo |
+
+Errores → 500 genérico en ambas (sin stack). El ejecutor web de app1 es `php -S 0.0.0.0:8000 -t public public/router.php` (el `-t` es obligatorio: por defecto el docroot es el CWD y el estático `/app.css` daría 404). El look replica el de app2 con **Tailwind compilado**: `app1/assets/app.css` (`@import "tailwindcss"` + `@source "./src"`, porque las clases viven en strings PHP) se compila a `app1/public/app.css` (commiteado) con `make css` — node solo en el host, el equivalente al build de Vite que genera el CSS de app2.
+
+## Comandos make (Makefile de la raíz, a cierre de la Fase 6)
 
 ```makefile
-up:           ## levanta los 3 contenedores
-	docker compose up -d --build
+up:           ## levanta bbdd, app2, app1 (bbdd-test solo bajo el profile "test")
 down:         ## para y borra
-	docker compose down -v
-test-db:      ## (Fase 2+) MySQL de tests, profile "test", host 3307
-	docker compose --profile test up -d --wait bbdd-test
-test:         ## (Fase 2+) tests de integración de app2 contra bbdd-test
-	cd app2 && npm run test
-sync:         ## inscribe los suscriptores declarados en domain_events_routing (app2 hoy; incluirá app1)
+test-db:      ## MySQL de tests (profile "test", host 3307), con --wait (healthcheck)
+test:         ## suite de app2 (Vitest en host, Node 26 vía nvm) + suite de app1 (PHPUnit en contenedor) — ambas contra bbdd-test
+sync:         ## inscribe los suscriptores de ambas apps en domain_events_routing
 	docker exec app2 npm run sync-routing
+	docker exec app1 php bin/console events:sync-routing
 consume-a2:   ## una ronda de consume en app2 (SUBSCRIBERS=* LIMIT=10)
-	docker exec app2 npm run consume-events -- "$(SUBSCRIBERS)" "$(LIMIT)"
 watch-consume: ## bucle de consume en app2 cada CONSUME_INTERVAL_SECONDS (Ctrl+C para parar)
-	while true; do \
-		docker exec app2 npm run consume-events -- "$(SUBSCRIBERS)" "$(LIMIT)"; \
-		sleep "$(CONSUME_INTERVAL_SECONDS)"; \
-	done
-consume-a1:   ## (con app1) una ronda de consume en app1
-	docker exec app1 php bin/console events:consume '*' 10
+consume-a1:   ## una ronda de consume en app1
+watch-consume-a1: ## bucle de consume en app1 cada CONSUME_INTERVAL_SECONDS
 ```
 
 ## Puesta en marcha de la demo (chuleta)
 
 ```bash
-make up                     # terceros levantan app1, app2, bbdd con las BDs creadas
+make up                     # levanta bbdd, app1, app2 con las BDs creadas
 make sync                   # routing inscribe a todos los suscriptores declarados
 # 🛒 compone un pedido en http://localhost:4321  (app2 publica order_created)
-make consume-a1             # app1 procesa → email de confirmación + publica order_confirmed
-make consume-a2             # app2 muestra el pedido como confirmado
-# 📦 desde el back-office de app1 (8000): confirmar/enviar pedido
-make consume-a2             # app2 refleja "enviado" con nº de tracking
+make consume-a1             # app1 procesa → email de confirmación (log 📧)
+# ✅ back-office de app1 (8000): botón "Confirmar" (publica order_confirmed)
+make consume-a2             # app2 marca el pedido como confirmado (+ fila en order_status_history)
+# 📦 botón "Enviar" en app1 (o `docker exec app1 php bin/console ops:orders:ship <id>`)
+make consume-a2             # app2 refleja "enviado" con nº de tracking (PLK-#####)
+# 👀 abre http://localhost:4321/products/<id> (app2 publica product_viewed)
+make consume-a1             # app1 procesa → views +1 (visible en http://localhost:8000/products)
 ```

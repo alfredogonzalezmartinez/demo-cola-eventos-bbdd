@@ -47,7 +47,7 @@ function toSql(
 
     const value = values[i];
     const isJson = value !== null && typeof value === "object" && "$$json" in value;
-    const isRaw = !isJson && typeof value === "object" && "$$raw" in value;
+    const isRaw = !isJson && value !== null && typeof value === "object" && "$$raw" in value;
 
     if (isRaw) {
       sql += (value as RawFragment).$$raw;

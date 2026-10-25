@@ -174,6 +174,6 @@ interface DomainEventSubscriber<T extends DomainEvent> {
 |---|---|---|---|
 | `OrderConfirmationEmail` | app1 | `order_created` | Manda el email |
 | `ProductStats` | app1 | `product_viewed` | `UPDATE products SET views = views + amount` |
-| `UpdateOrderStatus` | app2 | `order_confirmed`, `order_shipped` | `UPDATE orders SET status = …` (con history) |
+| `UpdateOrderStatus` | app2 | `order_confirmed`, `order_shipped` | `UPDATE orders SET status = …` + fila nueva en `order_status_history` (`tracking_number` NULL salvo en la de `shipped`) |
 
 La **tabla de routing** se llena a partir de `subscribedTo()` + `name()` con el comando de sincronización — nadie escribe a mano `domain_events_routing`.

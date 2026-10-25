@@ -55,7 +55,7 @@ src/
 
 | Pieza | Referencia (Next.js/Node) | Aquí (app2) | Aquí (app1) |
 |-------|---------------------------|-------------|-------------|
-| DI con tags para suscriptores | [`diod`](https://www.npmjs.com/package/diod) (`container.findTaggedServiceIdentifiers("subscriber")`) | Se mantiene igual (diod) en app2 | Symfony DIC con services tagged `kernel.event_subscriber-like` / atributo `#[DomainEventSubscriber]` |
+| DI con tags para suscriptores | [`diod`](https://www.npmjs.com/package/diod) (`container.findTaggedServiceIdentifiers("subscriber")`) | Se mantiene igual (diod) en app2 | Symfony DIC: interfaces `DomainEventSubscriber` + tag `subscriber` declarado **a mano en services.yaml**, inyectado con `!tagged_iterator` |
 | Conexión BD | `postgres` (npm) | `mysql2` (npm) | Doctrine DBAL / PDO en crudo para el bus (sin ORM) |
 | Payload del evento | JSONB | JSON | JSON |
 | Tareas por cron | script Node + `/api/event-bus/consume` con Bearer `CRON_SECRET` | idéntico | `bin/console events:consume` servido por cron; endpoint API opcional con `#[IsGranted]` |

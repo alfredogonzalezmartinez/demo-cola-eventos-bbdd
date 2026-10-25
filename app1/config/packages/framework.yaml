@@ -1,0 +1,2 @@
+framework:
+    secret: 'demo-events-bbdd-not-for-prod'

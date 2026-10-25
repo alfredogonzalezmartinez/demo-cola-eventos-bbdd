@@ -12,7 +12,9 @@ import { MysqlConnection } from "../mysql/MysqlConnection";
 import { NativeUuidGenerator } from "../NativeUuidGenerator";
 
 import { CheckoutOrder } from "../../../commerce/orders/application/CheckoutOrder";
+import { UpdateOrderStatus } from "../../../commerce/orders/application/UpdateOrderStatus";
 import { MysqlOrderRepository } from "../../../commerce/orders/infrastructure/MysqlOrderRepository";
+import { MysqlOrderStatusUpdater } from "../../../commerce/orders/infrastructure/MysqlOrderStatusUpdater";
 import { ComercioMysqlConnection } from "../../../commerce/infrastructure/mysql/ComercioMysqlConnection";
 import { MysqlProductRepository } from "../../../commerce/products/infrastructure/MysqlProductRepository";
 import { ViewProduct } from "../../../commerce/products/application/ViewProduct";
@@ -85,6 +87,18 @@ builder
   .useFactory(
     (container) => new ViewProduct(container.get(MysqlProductRepository), container.get(EventBus)),
   )
+  .asSingleton();
+
+// Suscriptor de los eventos `ops.*` publicados por app1 (tag `subscriber`)
+builder
+  .register(MysqlOrderStatusUpdater)
+  .useFactory((container) => new MysqlOrderStatusUpdater(container.get(ComercioMysqlConnection)))
+  .asSingleton();
+
+builder
+  .register(UpdateOrderStatus)
+  .useFactory((container) => new UpdateOrderStatus(container.get(MysqlOrderStatusUpdater)))
+  .addTag("subscriber")
   .asSingleton();
 
 export const container = builder.build();
