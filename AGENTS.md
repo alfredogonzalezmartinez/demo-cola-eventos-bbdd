@@ -29,5 +29,5 @@ Lee `docs/` de forma perezosa y por tarea: empieza por la fila que aplique, y so
 - La cola vive en BD `eventos`; el dominio en `comercio`. MySQL 8.0.40 (TZ UTC) ya está fijado — cualquier cambio pasa por actualizar los docs.
 - app2 primero (copia 1:1 de la referencia); app1 replica el modelo en PHP.
 
-- Commits: sólo cuando el usuario lo indique explícitamente; nunca por propia iniciativa. Cuando toque committear, proponer el/los mensajes vía la herramienta de preguntas interactivas (`question`) y ejecutar sólo tras su ok.
+- Commits: sólo cuando el usuario lo indique explícitamente; nunca por propia iniciativa. El mensaje lo elige el agente (Conventional Commits en inglés, skill `codely-git-conventional-commit`) sin preguntar — sólo se consulta al usuario si la decisión necesita razonamiento.
 - Comentarios en código y ficheros de config: sólo si explican algo no deducible (el *porqué*, decisiones con enlace a la doc del tema, advertencias puntuales). Fuera: referencias a fases del plan, narrativa de progreso o estados ("llegan con la Fase X", "cerrado en la Fase Y") — eso vive en la doc y en `docs/09`.
