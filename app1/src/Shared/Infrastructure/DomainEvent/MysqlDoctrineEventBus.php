@@ -58,7 +58,20 @@ final class MysqlDoctrineEventBus implements EventBus
     public function consume(array|string $subscribers, int $limit): void
     {
         $this->connection->transactional(function (DoctrineConnection $tx) use ($subscribers, $limit): void {
-            $rows = $this->searchEventsToConsume($subscribers, $limit, $tx);
+            // '*' = los suscriptores declarados en ESTA app: la cola es
+            // compartida, las filas ajenas se quedan para su app consumidora
+            $effectiveSubscribers = $subscribers === '*'
+                ? array_map(
+                    static fn (DomainEventSubscriber $subscriber): string => $subscriber->name(),
+                    $this->subscribers,
+                )
+                : $subscribers;
+
+            if ($effectiveSubscribers === []) {
+                return;
+            }
+
+            $rows = $this->searchEventsToConsume($effectiveSubscribers, $limit, $tx);
 
             foreach ($rows as $row) {
                 $this->executeSubscriberForEvent($row, $tx);

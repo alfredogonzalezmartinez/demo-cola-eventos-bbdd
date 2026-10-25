@@ -41,8 +41,19 @@ export class MysqlEventBus implements EventBus {
   }
 
   async consume(subscribers: string[] | "*", limit: number): Promise<void> {
+    // '*' = los suscriptores declarados en ESTA app: la cola es compartida,
+    // las filas dirigidas a suscriptores de la otra app se las queda su dueña
+    const effectiveSubscribers =
+      subscribers === "*"
+        ? this.eventSubscribersGetter().map((subscriber) => subscriber.name())
+        : subscribers;
+
+    if (effectiveSubscribers.length === 0) {
+      return;
+    }
+
     await this.connection.sql.begin(async (tx) => {
-      const rows = await this.searchEventsToConsume(subscribers, limit, tx);
+      const rows = await this.searchEventsToConsume(effectiveSubscribers, limit, tx);
 
       for (const row of rows) {
         await this.executeSubscriberForEvent(row, tx);

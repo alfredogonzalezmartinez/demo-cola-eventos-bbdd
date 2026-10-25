@@ -20,7 +20,7 @@ Como en la referencia, cada app tiene **su propio gancho**:
 | app2 (Node) | `npm run consume-events [subscribers] [limit]` y `GET /api/event-bus/consume` (Bearer `CRON_SECRET`) | cron del host ejecuta cada N seg el script; también puede verse en `etc/scripts/1-start.sh` |
 | app1 (PHP) | `php bin/console events:consume [subscribers] [limit]` | mismo cron, llamando al comando Symfony |
 
-> En la demo **ambas apps consumen sus eventos** con el mismo mecanismo. `subscribers = *` dentro de una app igual consumiría los de la otra (por diseño — un solo modelo); en la demo se filtra por suscriptores de cada app: los de app1 en app1, los de app2 en app2 (ver tabla de suscriptores en [04-modelo-eventos.md](04-modelo-eventos.md#los-suscriptores)).
+> En la demo **ambas apps consumen solo sus eventos**: con `subscribers = *` el bus instancia, para cada app, el IN con los nombres de sus suscriptores declarados (tabla de [04-modelo-eventos.md](04-modelo-eventos.md#los-suscriptores)) — las filas dirigidas a suscriptores de la otra app ni se tocan (se quedan en la cola para su dueña). Una lista explícita de nombres (`subscribers=a,b`) también funciona, y filas con nombres desconocidos ni aparecen.
 
 Driver de la demo (host): `make watch-consume` (bucle cada `CONSUME_INTERVAL_SECONDS`, default 60) o rondas sueltas con `make consume-a2 [SUBSCRIBERS=... LIMIT=...]`; el routing se inscribe a mano con `make sync` (`INSERT IGNORE` idempotente). El endpoint del detalle en [07](07-infraestructura.md#endpoints-http-expuestos-para-probar-sin-cron) queda para un cron real. Los scripts y el endpoint de app2 aceptan `subscribers` (CSV o `*`) y `limit` con los mismos defaults que la referencia.
 
@@ -32,7 +32,7 @@ consume(subscribers, limit)
   1. SELECT event_id, subscriber_name, name, attributes, occurred_at, retries
      FROM domain_events_to_consume
      WHERE is_in_dead_letter = false
-       [ AND subscriber_name IN (subscribersFilter) ]      -- "*" ⇒ sin filtro
+       AND subscriber_name IN (subscribersFilter)          -- "*" ⇒ IN con los suscriptores DECLARADOS en esta app (col. propia); lista vacía ⇒ no consume
      ORDER BY inserted_at ASC
      LIMIT ${limit}
      FOR UPDATE SKIP LOCKED                                -- ⚠️ hilos/crones simultáneos no se pisan
