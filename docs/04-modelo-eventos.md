@@ -104,7 +104,7 @@ abstract readonly class DomainEvent
 
 Cada tipo de evento (p.ej. `OrderCreatedDomainEvent`) declara su propio `eventName` como constante/atributo y un constructor desde/desde `attributes`.
 
-## Payload de los 4 eventos del escenario
+## Payload de los eventos del escenario
 
 ### `commerce.order_created_domain_event` — publicada por app2
 
@@ -131,17 +131,17 @@ Cada tipo de evento (p.ej. `OrderCreatedDomainEvent`) declara su propio `eventNa
 }
 ```
 
-### `ops.order_confirmed_domain_event` — publicada por app1
+### `ops.order_confirmed_domain_event` — publicada por **app2** (remodelado: dueña del estado)
 
 ```json
 {
   "id": "b1a5e0f2-…",                       // aggregateId: id del pedido
-  "email": "cliente@example.com",           // enriquecido del pedido leído en `comercio`
-  "confirmedAt": "2026-10-23T12:00:00Z"     // timestamps ISO-8601 UTC
+  "email": "cliente@example.com",
+  "confirmedAt": "2026-10-23T12:00:00Z"     // timestamps ISO-8601 UTC (= instante de la escritura)
 }
 ```
 
-### `ops.order_shipped_domain_event` — publicada por app1
+### `ops.order_shipped_domain_event` — publicada por **app2** (remodelado)
 
 ```json
 {
@@ -150,6 +150,19 @@ Cada tipo de evento (p.ej. `OrderCreatedDomainEvent`) declara su propio `eventNa
   "trackingNumber": "PLK-88213"
 }
 ```
+
+### `ops.product_created_domain_event` / `ops.product_updated_domain_event` — publicadas por **app1** (fuente del catálogo)
+
+```json
+{
+  "id": "70c1d2e4-…",                       // aggregateId: id del producto
+  "name": "Teclado mecánico",
+  "priceAmount": 49.90,
+  "priceCurrency": "EUR"
+}
+```
+
+> Las `views` NO viajan en el payload — son métrica local de app1 y viven en `ops.products`.
 
 ### Reglas de payload
 
@@ -173,7 +186,13 @@ interface DomainEventSubscriber<T extends DomainEvent> {
 | Suscriptor | App | Escucha | Acción |
 |---|---|---|---|
 | `OrderConfirmationEmail` | app1 | `order_created` | Manda el email |
-| `ProductStats` | app1 | `product_viewed` | `UPDATE products SET views = views + amount` |
-| `UpdateOrderStatus` | app2 | `order_confirmed`, `order_shipped` | `UPDATE orders SET status = …` + fila nueva en `order_status_history` (`tracking_number` NULL salvo en la de `shipped`) |
+| `OrderProjection` | app1 | `order_created`, `order_confirmed`, `order_shipped` | Siembra/actualiza la proyección `ops.orders` (guard por fechas contra `status_changed_at`) |
+| `ProductStats` | app1 | `product_viewed` | `UPDATE ops.products SET views = views + amount` |
+| `SyncProductCatalog` | app2 | `ops.product_created`, `ops.product_updated` | Upsert de la proyección `comercio.products` (guard por fechas contra `changed_at`) |
+
+> El antiguo `UpdateOrderStatus` (app2) desaparece con el remodelado: la
+> transición `created → confirmed → shipped` la aplica el **comando
+> síncrono** del back-office de app1 (docs/05) y app2 publica los eventos
+> `ops.order_*` que alimentan la proyección de app1.
 
 La **tabla de routing** se llena a partir de `subscribedTo()` + `name()` con el comando de sincronización — nadie escribe a mano `domain_events_routing`.

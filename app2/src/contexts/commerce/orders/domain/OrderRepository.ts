@@ -6,4 +6,7 @@ export interface OrderRepository {
   save(order: Order): Promise<void>;
   search(orderId: string): Promise<Order | null>;
   searchAll(status?: OrderStatus): Promise<Order[]>;
+
+  /** Lectura para la vista: último cambio de estado por pedido */
+  latestStatusChanges(orderIds: string[]): Promise<Map<string, Date>>;
 }

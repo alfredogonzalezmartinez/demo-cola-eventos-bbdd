@@ -77,6 +77,26 @@ export class MysqlOrderRepository implements OrderRepository {
     return Promise.all(rows.map((row) => this.hydrate(row)));
   }
 
+  /**
+   * Último cambio de estado por pedido (lectura a la vista del listado,
+   * fuera del agregado): fecha de `order_status_history`.
+   */
+  async latestStatusChanges(orderIds: string[]): Promise<Map<string, Date>> {
+    if (orderIds.length === 0) {
+      return new Map();
+    }
+
+    // El array lo expande toSql como `(?, ?)` — listo para IN
+    const rows = (await this.connection.sql`
+			SELECT order_id, MAX(changed_at) AS changed_at
+			FROM order_status_history
+			WHERE order_id IN ${orderIds}
+			GROUP BY order_id
+		`) as { order_id: string; changed_at: Date }[];
+
+    return new Map(rows.map((row) => [row.order_id, row.changed_at]));
+  }
+
   private async hydrate(row: {
     id: string;
     email: string;

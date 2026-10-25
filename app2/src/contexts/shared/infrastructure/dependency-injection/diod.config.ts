@@ -12,11 +12,13 @@ import { MysqlConnection } from "../mysql/MysqlConnection";
 import { NativeUuidGenerator } from "../NativeUuidGenerator";
 
 import { CheckoutOrder } from "../../../commerce/orders/application/CheckoutOrder";
-import { UpdateOrderStatus } from "../../../commerce/orders/application/UpdateOrderStatus";
+import { ConfirmOrder } from "../../../commerce/orders/application/ConfirmOrder";
+import { ShipOrder } from "../../../commerce/orders/application/ShipOrder";
 import { MysqlOrderRepository } from "../../../commerce/orders/infrastructure/MysqlOrderRepository";
 import { MysqlOrderStatusUpdater } from "../../../commerce/orders/infrastructure/MysqlOrderStatusUpdater";
 import { ComercioMysqlConnection } from "../../../commerce/infrastructure/mysql/ComercioMysqlConnection";
 import { MysqlProductRepository } from "../../../commerce/products/infrastructure/MysqlProductRepository";
+import { SyncProductCatalog } from "../../../commerce/products/application/SyncProductCatalog";
 import { ViewProduct } from "../../../commerce/products/application/ViewProduct";
 
 const builder = new ContainerBuilder();
@@ -95,9 +97,35 @@ builder
   .useFactory((container) => new MysqlOrderStatusUpdater(container.get(ComercioMysqlConnection)))
   .asSingleton();
 
+// Comandos síncronos del back-office de app1 (docs/05): app2 es dueño del estado
 builder
-  .register(UpdateOrderStatus)
-  .useFactory((container) => new UpdateOrderStatus(container.get(MysqlOrderStatusUpdater)))
+  .register(ConfirmOrder)
+  .useFactory(
+    (container) =>
+      new ConfirmOrder(
+        container.get(MysqlOrderRepository),
+        container.get(MysqlOrderStatusUpdater),
+        container.get(EventBus),
+      ),
+  )
+  .asSingleton();
+
+builder
+  .register(ShipOrder)
+  .useFactory(
+    (container) =>
+      new ShipOrder(
+        container.get(MysqlOrderRepository),
+        container.get(MysqlOrderStatusUpdater),
+        container.get(EventBus),
+      ),
+  )
+  .asSingleton();
+
+// Suscriptor de `ops.product_*` (remodelado, docs/04): mantiene la proyección del catálogo
+builder
+  .register(SyncProductCatalog)
+  .useFactory((container) => new SyncProductCatalog(container.get(MysqlProductRepository)))
   .addTag("subscriber")
   .asSingleton();
 

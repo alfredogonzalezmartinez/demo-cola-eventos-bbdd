@@ -119,9 +119,9 @@ beforeEach(async () => {
   await syncRouting();
 
   await comercioConnection.sql`
-		INSERT INTO products (id, name, price_amount, price_currency) VALUES
-			(${PRODUCT_A.id}, ${PRODUCT_A.name}, ${PRODUCT_A.price}, 'EUR'),
-			(${PRODUCT_B.id}, ${PRODUCT_B.name}, ${PRODUCT_B.price}, 'EUR')
+		INSERT INTO products (id, name, price_amount, price_currency, changed_at) VALUES
+			(${PRODUCT_A.id}, ${PRODUCT_A.name}, ${PRODUCT_A.price}, 'EUR', NOW(6)),
+			(${PRODUCT_B.id}, ${PRODUCT_B.name}, ${PRODUCT_B.price}, 'EUR', NOW(6))
 	`;
 });
 

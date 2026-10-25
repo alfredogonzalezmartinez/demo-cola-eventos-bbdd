@@ -4,8 +4,19 @@ import "../styles/global.css";
 import { container } from "../contexts/shared/infrastructure/dependency-injection/diod.config";
 import { MysqlOrderRepository } from "../contexts/commerce/orders/infrastructure/MysqlOrderRepository";
 
-const orders = await container.get(MysqlOrderRepository).searchAll();
+const orderRepository = container.get(MysqlOrderRepository);
+const orders = await orderRepository.searchAll();
+const statusChanges = await orderRepository.latestStatusChanges(orders.map((order) => order.id));
 const eur = (amount: number) => `€ ${amount.toFixed(2)}`;
+
+// Fechas en formato corto EU (listado SSR): 2 dígitos + hora
+const fmtDate = new Intl.DateTimeFormat("es", {
+  day: "2-digit",
+  month: "2-digit",
+  year: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+});
 
 // Estado → clases del badge del listado de pedidos
 const statusStyles: Record<string, string> = {
@@ -29,7 +40,7 @@ const statusStyles: Record<string, string> = {
 
 			<h1 class="text-2xl font-semibold text-white mb-2">Pedidos</h1>
 			<p class="text-xs text-slate-500 mb-6">
-				Los estados confirmed/shipped los actualiza el consumidor de app2 al recibir eventos de app1
+				Los estados confirmed/shipped los escribe app2 al recibir el comando síncrono del back-office (app1); sus eventos `ops.order_*` actualizan la proyección de app1
 			</p>
 
 			<table class="w-full text-left text-sm">
@@ -39,6 +50,8 @@ const statusStyles: Record<string, string> = {
 						<th class="py-2">Email</th>
 						<th class="py-2 text-right">Total</th>
 						<th class="py-2 text-right">Estado</th>
+						<th class="py-2 text-right">Creado</th>
+						<th class="py-2 text-right">Último cambio de estado</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -54,6 +67,10 @@ const statusStyles: Record<string, string> = {
 									>
 										{order.status}
 									</span>
+								</td>
+								<td class="py-2.5 text-right text-xs text-slate-400">{fmtDate.format(order.createdAt)}</td>
+								<td class="py-2.5 text-right text-xs text-slate-400">
+									{statusChanges.get(order.id) ? fmtDate.format(statusChanges.get(order.id)!) : "—"}
 								</td>
 							</tr>
 						))

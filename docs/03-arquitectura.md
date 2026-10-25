@@ -6,7 +6,7 @@
 |------------|-------------|-----------------|
 | `app1` | `php:8.3` + Symfony CLI | Web/API de operaciones. Puerto `8000`. Ejecuta comandos de consume y sync-routing |
 | `app2` | `node:26` + adaptador Node de Astro | Web de tienda SSR + API routes. Puerto `4321`. Ejecuta scripts de consume y sync-routing |
-| `bbdd` | `mysql:8.0.40` | Servidor MySQL con las bases `eventos` y `comercio`. Puerto `3306` |
+| `bbdd` | `mysql:8.0.40` | Servidor MySQL con las bases `eventos`, `comercio` y `ops`. Puerto `3306` |
 
 Detalles de compose, variables y arranque: [07-infraestructura.md](07-infraestructura.md).
 
@@ -15,9 +15,10 @@ Detalles de compose, variables y arranque: [07-infraestructura.md](07-infraestru
 | BD | Dueño | Contenido |
 |----|-------|-----------|
 | `eventos` | **ninguna app es dueña: es infraestructura compartida** | `domain_events_to_consume` (la cola) y `domain_events_routing` (rutas evento→suscriptor) |
-| `comercio` | repartida por tablas: app2 (`orders`, `order_items`), app1 (`products` métricas…), ver [02-escenario-demo.md](02-escenario-demo.md#base-de-datos-de-dominio-comercio) | Dato de dominio e-commerce |
+| `comercio` | app2 | Estado de la tienda: `orders`, `order_items`, `order_status_history` y la proyección `products` (DDL en [02-escenario-demo.md](02-escenario-demo.md#bases-de-datos-de-dominio)) |
+| `ops` | app1 | Back-office: `products` (fuente del catálogo + `views`), `orders` (proyección de pedidos) y `order_commands` (auditoría de comandos) |
 
-Equivalencia con la referencia de Codely: `eventos` ≙ `public`; `comercio` ≙ `mooc` + `shop` fusionado en una BD porque MySQL no tiene esquemas independientes dentro de una BD (usamos una BD única y la propiedad se define por tabla).
+Equivalencia con la referencia de Codely: `eventos` ≙ `public`; `comercio` ≙ `mooc` + `shop` fusionado en una BD porque MySQL no tiene esquemas independientes dentro de una BD (usamos una BD única y la propiedad se define por tabla); `ops` no tiene equivalente en la referencia (BD propia del back-office, añadida por el escenario).
 
 ## Organización del código (DDD + hexagonal)
 

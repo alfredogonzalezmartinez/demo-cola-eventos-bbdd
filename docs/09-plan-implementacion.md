@@ -112,6 +112,18 @@ cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/context
 - [ ] README actualizado con el "cómo lo levantas" real que funciona
 - [ ] `docs/09` archiva lecciones aprendidas (récord de decisiones adoptadas)
 
+## Fase extra · Remodelado del escenario (2026-10-25)
+
+Fuera de las fases originales: reorganización de propiedad de datos y una segunda vía de comunicación. Se mantiene el resto del plan intacto.
+
+- [x] **Comando síncrono confirm/ship** (app1 → app2): `POST /api/ops/orders/{id}/confirm|ship` con Bearer `OPS_API_TOKEN`; app2 valida la máquina de estados con CAS (`UPDATE … WHERE status = expected`) y responde 200 `{status, statusChangedAt}` / 404 / 409 `{error, currentStatus, expectedStatus}`; luego aplica estado+history en **una** transacción de `comercio` y publica `ops.order_*` en el bus (segunda transacción). `occurredAt` = `statusChangedAt` (reloj de app2). `UpdateOrderStatus` de app2 desaparece.
+- [x] **BD `ops` propia de app1** (`databases/03-ops.sql`): `products` pasa a ser la **fuente** del catálogo (back-office CRUD publica `ops.product_created/updated`), `orders` es proyección de app1 (guard por fechas contra `status_changed_at`), y `comercio.products` pasa a proyección de app2 (guard contra `changed_at`, seed dual de 3 productos en ambas BDs).
+- [x] **Pendientes con mecanismo propio de app1** (nunca consulta la cola): tabla `ops.order_commands` (auditoría de comandos aceptados, condición calculada `requested_at > status_changed_at` — patrón token/versión); badge ⏳ en el listado con polling JS contra `GET /orders/{id}.json`; errores 409 vuelven como banner `?error=`.
+- [x] **Vista de fechas en `/orders` de app2**: columnas "Creado" y "Último cambio de estado" (de `order_status_history`).
+- [x] Monitor de BDs adaptado (3ª BD `ops`, Drizzle Studio en el puerto 4985) y envs nuevos en compose/.env (`OPS_API_TOKEN`, `OPS_DSN`, `OPS_API_BASE_URL`).
+
+> **✅ Estado (2026-10-25)**: cerrada — suites verdes (app2: Vitest 24/24 con `OrdersCommands.test.ts` y `SyncProductCatalog.test.ts` nuevos; app1: PHPUnit 8/8; `vp check` sin avisos; `php -l` limpio) y demo E2E viva completa: checkout → email + proyección; confirm desde back-office (204 + doble clic con 409 semántico → banner) → evento regresa → badge off; ship → `shipped` con tracking; catálogo app1 → proyección app2; `product_viewed` → `views` en `ops.products`. Lecciones: **(1)** imports de valor en `subscribedTo()` (ya visto en Fase 6) volvió a morder a los dos eventos nuevos de app2; **(2)** la guard de Vite bloquea el Host `app2` (DNS interno) en dev → `server.allowedHosts` en `astro.config.mjs`; **(3)** el `truncateAll` cruzado entre workers de Vitest puede flakear bajo arranque frío del MySQL de test (reintento OK; ya mitigado con `fileParallelism: false`); **(4)** limpiar la fila de routing de un suscriptor eliminado (`UpdateOrderStatus`) a mano tras `make sync` (los `INSERT IGNORE` no borran). Pendiente de decisiones futuras: transacción única dominio+cola (outbox real) sigue como mejora.
+
 ## Riesgos conocidos
 
 | Riesgo | Mitigación |

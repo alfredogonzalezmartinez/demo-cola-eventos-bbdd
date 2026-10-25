@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Ops\Orders\Domain;
 
-/** Lectura de pedidos de `comercio` para ops (docs/03) */
+/** Lectura de la proyección `ops.orders` del back-office (docs/03) */
 interface OrdersRepository
 {
     public function find(string $orderId): ?Order;

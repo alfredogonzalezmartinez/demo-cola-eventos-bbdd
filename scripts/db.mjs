@@ -37,6 +37,7 @@ mkdirSync(LOGS, { recursive: true });
 const SCHEMAS = [
 	{ name: "eventos", env: "MYSQL_EVENTOS_URL", fallback: "mysql://demo:demo@localhost:3306/eventos", studioPort: 4983 },
 	{ name: "comercio", env: "MYSQL_COMERCIO_URL", fallback: "mysql://demo:demo@localhost:3306/comercio", studioPort: 4984 },
+	{ name: "ops", env: "OPS_DSN", fallback: "mysql://demo:demo@localhost:3306/ops", studioPort: 4985 },
 ];
 
 // Todos los glifos (spinner dots, ✓, ✗) son de ancho 1 y las filas tienen

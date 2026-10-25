@@ -1,16 +1,17 @@
 #!/usr/bin/env zsh
 # Lanza Drizzle Studio para una BD de la demo.
-# Cada BD vive en su propio puerto, así que las dos instancias pueden
-# convivir: eventos→4983 (https://local.drizzle.studio) y
-# comercio→4984 (?port=4984).
-# Uso: ./studio.sh eventos|comercio (desde scripts/db o con ruta)
+# Cada BD vive en su propio puerto, así que las instancias pueden
+# convivir: eventos→4983, comercio→4984 y ops→4985
+# (https://local.drizzle.studio).
+# Uso: ./studio.sh eventos|comercio|ops (desde scripts/db o con ruta)
 set -e
 
 BD="${1:-eventos}"
 case "$BD" in
 	eventos)  PUERTO=4983 ;;
 	comercio) PUERTO=4984 ;;
-	*) echo "BD desconocida: $BD (usa eventos|comercio)"; exit 1 ;;
+	ops)      PUERTO=4985 ;;
+	*) echo "BD desconocida: $BD (usa eventos|comercio|ops)"; exit 1 ;;
 esac
 
 cd "$(dirname "$0")"

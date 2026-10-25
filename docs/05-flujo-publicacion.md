@@ -76,17 +76,43 @@ async checkout(cart): Promise<Order> {
 
 ## Ejemplo en app1 (PHP)
 
-Idéntico el flujo; acción distinta: publico `order_confirmed` y `order_shipped` (ver payload en [04-modelo-eventos.md](04-modelo-eventos.md#payload-de-los-4-eventos-del-escenario)).
+Idéntico el flujo; acción distinta: publico `ops.product_created/updated` al escribir la fuente del catálogo (ver payload en [04-modelo-eventos.md](04-modelo-eventos.md#payload-de-los-eventos-del-escenario)).
 
 ```php
-public function __invoke(ConfirmOrder $command): void
+public function __invoke(string $name, float $price): void
 {
-    $order = $this->repository->find($command->orderId());
-    $order->confirm();
-    $this->repository->save($order);
-    $this->eventBus->publish($order->pullDomainEvents());   // op.order_confirmed_domain_event
+    $occurredAt = new \DateTimeImmutable('now', new \DateTimeZone('UTC'));
+    $this->products->save(new Product(...), $occurredAt);          // bd `ops` (fuente)
+    $this->eventBus->publish([new ProductCreatedDomainEvent(..., $occurredAt)]);   // 📤 → bd `eventos`
 }
 ```
+
+> El anchoring del `$occurredAt` (mismo instante escrito en la fila y en el
+> evento) es lo que permite el guard por fechas del consumidor.
+
+## Comando síncrono confirm/ship (remodelado)
+
+Confirmar/Enviar en el back-office ya NO publica eventos: es un **comando
+síncrono** hacia app2 (dueña del estado de `comercio`), autenticado con
+Bearer `OPS_API_TOKEN`:
+
+```
+app1 (back-office)  ── POST /api/ops/orders/{id}/confirm|ship ──▶  app2 (API)
+        │ Bearer OPS_API_TOKEN                                         │ valida máquina de estados (CAS)
+        │                                                              ├─ 200:(write estado + history) y publica `ops.order_*` en el bus (dos transacciones, docs/06)
+        │                                                              ├─ 404 no existe · 409 transición no permitida
+        └─ al 200 registra el comando en `ops.order_commands`
+```
+
+- app2 responde `{"status": "…", "statusChangedAt": "…ISO-8601…"}` — el
+  **instante de la escritura** es el token que persiste app1.
+- app1 registra en su BD `ops.order_commands` cada comando aceptado
+  (auditoría permanente); los 404/409 no generan fila y el error vuelve
+  como banner. Nada de consultar la cola: el indicador de "pendiente" del
+  badge deriva de comparar `ops.order_commands.requested_at` con la
+  proyección `ops.orders.status_changed_at` — mecanismo propio de app1
+  (patrón versión/token) que funciona igual hoy (cola en MySQL) que
+  mañana (cola en otro sistema).
 
 ## Registro del routing (sincronización)
 

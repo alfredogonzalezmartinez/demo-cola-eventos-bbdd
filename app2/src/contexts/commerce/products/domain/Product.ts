@@ -6,16 +6,19 @@ export type ProductPrimitives = {
   name: string;
   priceAmount: number;
   priceCurrency: string;
-  views: number;
 };
 
+/**
+ * Proyección del catálogo (remodelado, docs/03): `comercio.products` la
+ * mantiene el suscriptor `SyncProductCatalog` con los eventos
+ * `ops.product_*` de app1; the fuente vive en la BD `ops` del back-office.
+ */
 export class Product extends AggregateRoot {
   private constructor(
     public readonly id: string,
     public readonly name: string,
     public readonly priceAmount: number,
     public readonly priceCurrency: string,
-    public readonly views: number,
   ) {
     super();
   }
@@ -26,7 +29,6 @@ export class Product extends AggregateRoot {
       primitives.name,
       primitives.priceAmount,
       primitives.priceCurrency,
-      primitives.views,
     );
   }
 
@@ -36,7 +38,6 @@ export class Product extends AggregateRoot {
       name: this.name,
       priceAmount: this.priceAmount,
       priceCurrency: this.priceCurrency,
-      views: this.views,
     };
   }
 

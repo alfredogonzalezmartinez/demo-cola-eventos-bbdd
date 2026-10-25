@@ -9,7 +9,7 @@ const productId = Astro.params.id as string;
 const productNotFound = `<html lang="es" class="bg-slate-950"><body class="bg-slate-950 text-slate-200 p-6 font-sans"><p class="text-slate-400">Producto no encontrado — <a href="/" class="text-sky-400 hover:underline">volver a la tienda</a></p></body></html>`;
 
 // Cada render SSR del detalle publica `commerce.product_viewed` (docs/02):
-// el incremento de `views` es trabajo del consumidor, no de app2 (Q9).
+// el incremento de `views` es trabajo del back-office de app1, no de app2.
 const product = await container.get(ViewProduct).run(productId);
 
 if (!product) {
@@ -38,10 +38,6 @@ const eur = (amount: number) => `€ ${amount.toFixed(2)}`;
 				<h1 class="text-2xl font-semibold text-white mb-2">{product.name}</h1>
 				<p class="text-sm text-slate-400 mb-4">Precio unitario</p>
 				<p class="text-3xl font-bold text-emerald-400 mb-4">{eur(product.priceAmount)}</p>
-				<p class="text-sm text-slate-500">
-					Vistas acumuladas:
-					<span class="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-full">{product.views}</span>
-				</p>
 			</div>
 
 			<a

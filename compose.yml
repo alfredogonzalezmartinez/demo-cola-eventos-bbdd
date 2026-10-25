@@ -44,6 +44,7 @@ services:
       MYSQL_EVENTOS_URL: mysql://demo:demo@bbdd:3306/eventos
       MYSQL_COMERCIO_URL: mysql://demo:demo@bbdd:3306/comercio
       CRON_SECRET: ${CRON_SECRET}
+      OPS_API_TOKEN: ${OPS_API_TOKEN}
     ports:
       - "${APP2_HOST_PORT:-4321}:4321"
     volumes:
@@ -61,6 +62,9 @@ services:
     environment:
       EVENTOS_DSN: mysql://demo:demo@bbdd:3306/eventos
       COMERCIO_DSN: mysql://demo:demo@bbdd:3306/comercio
+      OPS_DSN: mysql://demo:demo@bbdd:3306/ops
+      OPS_API_BASE_URL: http://app2:4321
+      OPS_API_TOKEN: ${OPS_API_TOKEN}
       CRON_SECRET: ${CRON_SECRET}
     ports:
       - "${APP1_HOST_PORT:-8000}:8000"

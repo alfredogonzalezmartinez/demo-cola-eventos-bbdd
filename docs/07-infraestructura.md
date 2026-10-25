@@ -23,6 +23,7 @@ services:
     environment:
       MYSQL_EVENTOS_URL: mysql://demo:demo@bbdd:3306/eventos
       MYSQL_COMERCIO_URL: mysql://demo:demo@bbdd:3306/comercio
+      OPS_API_TOKEN: ${OPS_API_TOKEN}   # Bearer que verifica en /api/ops/orders/*
       CRON_SECRET: ${CRON_SECRET}    # auth de /api/event-bus/consume
     ports:
       - "${APP2_HOST_PORT:-4321}:4321"
@@ -35,6 +36,9 @@ services:
     environment:
       EVENTOS_DSN: mysql://demo:demo@bbdd:3306/eventos
       COMERCIO_DSN: mysql://demo:demo@bbdd:3306/comercio
+      OPS_DSN: mysql://demo:demo@bbdd:3306/ops       # BD propia del back-office
+      OPS_API_BASE_URL: http://app2:4321              # destino del comando confirm/ship
+      OPS_API_TOKEN: ${OPS_API_TOKEN}
       CRON_SECRET: ${CRON_SECRET}
     ports:
       - "${APP1_HOST_PORT:-8000}:8000"   # `php -S 0.0.0.0:8000 -t public public/router.php`
@@ -46,6 +50,11 @@ services:
         condition: service_healthy
 ```
 
+> `OPS_API_TOKEN` se comparte entre ambas apps vía `.env` (chuleta del token
+> Bearer del comando síncrono, docs/05). app1 llama a app2 por el DNS interno
+> `app2` (`OPS_API_BASE_URL`), así que en dev la config de Vite de app2
+> acepta ese host (`server.allowedHosts`).
+
 ## Bases de datos y arranque (databases/)
 
 Montados como `/docker-entrypoint-initdb.d`, se ejecutan en orden al crear el volumen:
@@ -53,16 +62,17 @@ Montados como `/docker-entrypoint-initdb.d`, se ejecutan en orden al crear el vo
 | Fichero | Contenido |
 |---|---|
 | `01-eventos.sql` | DDL de la cola: `domain_events_to_consume` + `domain_events_routing` (ver [04-modelo-eventos.md](04-modelo-eventos.md#esquema-de-la-cola-bd-eventos)) |
-| `02-comercio.sql` | DDL del dominio e-commerce (ver [02-escenario-demo.md](02-escenario-demo.md#base-de-datos-de-dominio-comercio)) |
+| `02-comercio.sql` | DDL del dominio e-commerce (app2): `orders`, `order_items`, `order_status_history` y la proyección `products` (ver [02-escenario-demo.md](02-escenario-demo.md#bases-de-datos-de-dominio)) |
+| `03-ops.sql` | DDL del back-office (app1): `products` (fuente del catálogo), `orders` (proyección) y `order_commands`; seed dual de 3 productos (mismos ids en ambas BDs) |
 
-> En MySQL el entrada `/docker-entrypoint-initdb.d` acepta varios `.sql` con `CREATE DATABASE … USE …` dentro para poblar las dos BDs en un solo motor.
+> En MySQL el entrada `/docker-entrypoint-initdb.d` acepta varios `.sql` con `CREATE DATABASE … USE …` dentro para poblar las tres BDs en un solo motor.
 
 > **Charset del initdb**: el cliente MySQL del entrypoint corre con `--default-character-set=auto` (latin1 en la práctica) ⇒ los literales UTF-8 del seed se guardarían con doble encode (`mecÃ¡nico`). Todos los `databases/*.sql` empiezan con `SET NAMES utf8mb4;` — no quitarlo.
 
 ### Inspección del estado
 
-- Estado y UIs: `npm run db` (raíz del repo) — monitor en vivo: panel de texto (sin caja) con filas estables `✓`(arriba, verde) / spinner (arrancando) / `✗`(no arranca), con nombre del schema en negrita y su URL de Drizzle Studio siempre con puerto (`https://local.drizzle.studio?port=4983` eventos / `?port=4984` comercio, clicable solo si la terminal soporta OSC 8). Sonda las dos BDs (carga `.env`; el DSN de compose (`bbdd`) no es resoluble desde el host y el `getaddrinfo` puede colgar ~90s, así que cada sonda corre contra reloj y si se pasa cae a `localhost`, que recuerda). Si una UI cae la relanza (3 intentos → fila `✗` y, debajo del panel, línea de error `✗ <bd> — no arranca la UI (N intentos) — revisa .local/logs/studio-<bd>.log`; reintento en segundo plano cada 30s, si recupera la fila vuelve a `✓`). Los logs de las instancias viven en `.local/logs/studio-<bd>.log` (también usados por `studio.sh`). Al salir (Ctrl+C) limpia el panel y muestra `Deteniendo monitor de base de datos…` con spinner y `✓ Detenido monitor de base de datos` (apagando **todas** las UIs, incluidas residuales de `studio.sh`). Con `--once` hace una sola pasada de estado, sin gestionar studios (exit 1 con errores). Estilado con `node:util` `styleText` (color/negritas), `terminal-link`+`supports-hyperlinks` (enlaces), `log-update` (redibujo en sitio) y `spinners` de `ora` (animación) — devDependencies de la raíz.
-- UI web: `npx drizzle-kit studio` por esquema con las configs y schemas de `scripts/db/` (usa el `drizzle-kit` de la raíz; `studio.sh eventos|comercio` para lanzarlas a mano): eventos→4983 en https://local.drizzle.studio y comercio→4984 en https://local.drizzle.studio?port=4984. Los snapshot `out/` que genera drizzle-kit van a `.local/drizzle/` (gitignored — no se mantienen migraciones).
+- Estado y UIs: `npm run db` (raíz del repo) — monitor en vivo: panel de texto (sin caja) con filas estables `✓`(arriba, verde) / spinner (arrancando) / `✗`(no arranca), con nombre del schema en negrita y su URL de Drizzle Studio siempre con puerto (`https://local.drizzle.studio?port=4983` eventos / `?port=4984` comercio / `?port=4985` ops, clicable solo si la terminal soporta OSC 8). Sonda las tres BDs (carga `.env`; el DSN de compose (`bbdd`) no es resoluble desde el host y el `getaddrinfo` puede colgar ~90s, así que cada sonda corre contra reloj y si se pasa cae a `localhost`, que recuerda). Si una UI cae la relanza (3 intentos → fila `✗` y, debajo del panel, línea de error `✗ <bd> — no arranca la UI (N intentos) — revisa .local/logs/studio-<bd>.log`; reintento en segundo plano cada 30s, si recupera la fila vuelve a `✓`). Los logs de las instancias viven en `.local/logs/studio-<bd>.log` (también usados por `studio.sh`). Al salir (Ctrl+C) limpia el panel y muestra `Deteniendo monitor de base de datos…` con spinner y `✓ Detenido monitor de base de datos` (apagando **todas** las UIs, incluidas residuales de `studio.sh`). Con `--once` hace una sola pasada de estado, sin gestionar studios (exit 1 con errores). Estilado con `node:util` `styleText` (color/negritas), `terminal-link`+`supports-hyperlinks` (enlaces), `log-update` (redibujo en sitio) y `spinners` de `ora` (animación) — devDependencies de la raíz.
+- UI web: `npx drizzle-kit studio` por esquema con las configs y schemas de `scripts/db/` (usa el `drizzle-kit` de la raíz; `studio.sh eventos|comercio|ops` para lanzarlas a mano): eventos→4983 en https://local.drizzle.studio, comercio→4984 y ops→4985 en https://local.drizzle.studio?port=NNNN. Los snapshot `out/` que genera drizzle-kit van a `.local/drizzle/` (gitignored — no se mantienen migraciones).
 
 ## Tareas periódicas (cron)
 
@@ -81,7 +91,9 @@ Intervalo para la demo: `CONSUME_INTERVAL_SECONDS=60` en `.env` (granularidad pr
 |---|---|---|
 | `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`) | app2 (API route de Astro) | `src/app/api/event-bus/consume/route.ts` |
 | `GET /api/health` → 200 | app2 | — |
+| `POST /api/ops/orders/{id}/confirm` y `/ship` (Bearer `OPS_API_TOKEN`) → 200 `{status, statusChangedAt}` · 404 · 409 `{error, currentStatus, expectedStatus}` | app2 (API routes, comando síncrono desde app1 — docs/05) | — |
 | `GET /api/event-bus/consume?subscribers=a,b&limit=10` (Bearer `CRON_SECRET`), mismo contrato | app1 (controller Symfony) | — |
+| `GET /orders/{id}.json` | app1 (JSON de polling del badge ⏳) | — |
 
 > **Mapeo de rutas Next → Astro** (decisión Fase 1): los ficheros que la referencia coloca en `src/app/**/route.ts` viven aquí como endpoints de Astro en `src/pages/api/**` (un `route.ts` Next = un `*.ts` Astro exportando `GET`/`POST`). Los scripts CLI sí mantienen la carpeta `src/app/scripts/` de la referencia (dentro de un proyecto Astro son código TS ejecutado con tsx, sin relación con el router).
 
@@ -89,11 +101,11 @@ Intervalo para la demo: `CONSUME_INTERVAL_SECONDS=60` en `.env` (granularidad pr
 
 | Ruta | App | Qué muestra |
 |---|---|---|
-| `/` (tienda), `/checkout`, `/orders` | app2 (Astro SSR, :4321) | checkout publica `order_created`; `products/[id]` publica `product_viewed` por render |
-| `GET /orders` + `POST /orders/{id}/confirm` y `/orders/{id}/ship` | app1 (back-office, :8000) | botones que publican `order_confirmed` / `order_shipped` (equivale a los comandos `ops:orders:confirm|ship`) |
-| `GET /products` | app1 | panel read-only de productos con las `views` que sube el consumo |
+| `/` (tienda), `/checkout`, `/orders` | app2 (Astro SSR, :4321) | checkout publica `order_created`; `products/[id]` publica `product_viewed` por render; `/orders` lista pedidos con columnas "Creado" y "Último cambio de estado" (de `order_status_history`) |
+| `GET /orders` + `POST /orders/{id}/confirm` y `/orders/{id}/ship` | app1 (back-office, :8000) | botones que lanzan el comando síncrono a app2 (docs/05); badge ⏳ de pendientes calculado en app1 (`order_commands` vs `orders`), con polling JS contra `/orders/{id}.json` y banner de error vía `?error=` |
+| `GET /products` y edición del catálogo | app1 | CRUD de la **fuente** del catálogo (publica `ops.product_created/updated`); las `views` que sube el consumo |
 
-Errores → 500 genérico en ambas (sin stack). El ejecutor web de app1 es `php -S 0.0.0.0:8000 -t public public/router.php` (el `-t` es obligatorio: por defecto el docroot es el CWD y el estático `/app.css` daría 404). El look replica el de app2 con **Tailwind compilado**: `app1/assets/app.css` (`@import "tailwindcss"` + `@source "./src"`, porque las clases viven en strings PHP) se compila a `app1/public/app.css` (commiteado) con `make css` — node solo en el host, el equivalente al build de Vite que genera el CSS de app2.
+Errores → 500 genérico en ambas (sin stack); los errores de dominio del confirm/ship (409 semántico) vuelven como **banner en la lista** de app1 vía redirect `?error=…`. El ejecutor web de app1 es `php -S 0.0.0.0:8000 -t public public/router.php` (el `-t` es obligatorio: por defecto el docroot es el CWD y el estático `/app.css` daría 404). El look replica el de app2 con **Tailwind compilado**: `app1/assets/app.css` (`@import "tailwindcss"` + `@source "./src"`, porque las clases viven en strings PHP) se compila a `app1/public/app.css` (commiteado) con `make css` — node solo en el host, el equivalente al build de Vite que genera el CSS de app2.
 
 ## Comandos make (Makefile de la raíz, a cierre de la Fase 6)
 
@@ -114,14 +126,17 @@ watch-consume-a1: ## bucle de consume en app1 cada CONSUME_INTERVAL_SECONDS
 ## Puesta en marcha de la demo (chuleta)
 
 ```bash
-make up                     # levanta bbdd, app1, app2 con las BDs creadas
-make sync                   # routing inscribe a todos los suscriptores declarados
+make up                     # levanta bbdd, app1, app2 con las BDs creadas (eventos, comercio, ops)
+make sync                   # routing inscribe a todos los suscriptores declarados (idempotente)
 # 🛒 compone un pedido en http://localhost:4321  (app2 publica order_created)
-make consume-a1             # app1 procesa → email de confirmación (log 📧)
-# ✅ back-office de app1 (8000): botón "Confirmar" (publica order_confirmed)
-make consume-a2             # app2 marca el pedido como confirmado (+ fila en order_status_history)
-# 📦 botón "Enviar" en app1 (o `docker exec app1 php bin/console ops:orders:ship <id>`)
-make consume-a2             # app2 refleja "enviado" con nº de tracking (PLK-#####)
+make consume-a1             # app1 procesa → email de confirmación (log 📧) + proyección `ops.orders`
+# ✅ back-office de app1 (8000): botón "Confirmar" → comando síncrono a app2 (devuelve 200, badge ⏳
+#    hasta que el evento `ops.order_confirmed` regresa proyectado)
+make consume-a1             # app1 consume order_confirmed → badge desaparece
+# 📦 botón "Enviar" en app1 (tracking opcional)
+make consume-a1             # app1 consume order_shipped → proyección "shipped"
+# 🏷️ crea/edita un producto en http://localhost:8000/products (app1 publica ops.product_*)
+make consume-a2             # app2 consume product_* → proyección `comercio.products` actualizada
 # 👀 abre http://localhost:4321/products/<id> (app2 publica product_viewed)
 make consume-a1             # app1 procesa → views +1 (visible en http://localhost:8000/products)
 ```

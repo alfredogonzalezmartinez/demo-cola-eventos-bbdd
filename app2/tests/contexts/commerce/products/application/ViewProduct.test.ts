@@ -110,8 +110,8 @@ beforeEach(async () => {
   await syncRouting();
 
   await comercioConnection.sql`
-		INSERT INTO products (id, name, price_amount, price_currency)
-		VALUES (${PRODUCT.id}, ${PRODUCT.name}, ${PRODUCT.price}, 'EUR')
+		INSERT INTO products (id, name, price_amount, price_currency, changed_at)
+		VALUES (${PRODUCT.id}, ${PRODUCT.name}, ${PRODUCT.price}, 'EUR', NOW(6))
 	`;
 });
 
@@ -135,14 +135,15 @@ describe("ViewProduct should", () => {
     expect(queueRows[0].attributes).toEqual({ id: PRODUCT.id, amount: 1 });
   });
 
-  it("not update views locally: the increment belongs to the consumer (ProductStats, app1)", async () => {
+  it("not touch the projection row: the increment belongs to the back-office (ProductStats, app1)", async () => {
     await viewProduct.run(PRODUCT.id);
 
     const rows = (await comercioConnection.sql`
-			SELECT views FROM products WHERE id = ${PRODUCT.id}
-		`) as { views: number }[];
+			SELECT name, price_amount FROM products WHERE id = ${PRODUCT.id}
+		`) as { name: string; price_amount: string }[];
 
-    expect(Number(rows[0].views)).toBe(0);
+    expect(rows[0].name).toBe(PRODUCT.name);
+    expect(Number(rows[0].price_amount)).toBe(PRODUCT.price);
   });
 
   it("return null and publish nothing for an unknown product", async () => {

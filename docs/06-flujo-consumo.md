@@ -72,6 +72,22 @@ consume(subscribers, limit)
 | Mismo `eventId` publicado dos veces para el mismo suscriptor | La PK `(event_id, subscriber_name)` lo impide (ver nota en [05-flujo-publicacion.md](05-flujo-publicacion.md#qué-hace-el-bus-al-publicar-comportamiento-que-se-replica-11)) |
 | Varios consumidores simultáneos | `FOR UPDATE SKIP LOCKED`: se reparten filas, nadie procesa dos veces la misma |
 
+## Los suscriptores de cada app y sus guards (remodelado)
+
+| Suscriptor | App | Escucha | Efecto |
+|---|---|---|---|
+| `OrderConfirmationEmail` | app1 | `commerce.order_created` | Email de confirmación (log) |
+| `OrderProjection` | app1 | `commerce.order_created` + `ops.order_confirmed/order_shipped` | Siembra/actualiza la proyección `ops.orders` |
+| `ProductStats` | app1 | `commerce.product_viewed` | `UPDATE ops.products SET views = views + amount` |
+| `SyncProductCatalog` | app2 | `ops.product_created/updated` | Upsert de la proyección `comercio.products` |
+
+En los dos proyectores, el consumidor es el encargado de que, aunque llegen
+eventos **duplicados o desordenados**, todo quede correcto: guarda el
+instante del último evento aplicado (`status_changed_at` en `ops.orders`,
+`changed_at` en `comercio.products`) y sólo aplica un evento cuyo
+`occurred_at` sea posterior — el guard por fechas (docs/05). El reloj es
+siempre el de la app publicadora (viene en la fila de la cola).
+
 ## Visibilidad para la demo
 
 Para ver las rondas en vivo (en ambas apps):

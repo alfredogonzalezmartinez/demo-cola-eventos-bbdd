@@ -1,6 +1,8 @@
 import { DomainEvent, type DomainEventAttributes } from "../../../shared/domain/event/DomainEvent";
 
-/** Clase local espejo del `OrderShippedDomainEvent` de app1 (contrato docs/04) */
+/** Evento `ops.order_shipped` (contrato docs/04): lo publica app2 al
+ * aplicar el comando síncrono del back-office (remodelado docs/05); su
+ * consumidor en app1 actualiza la proyección `ops.orders`. */
 export class OrderShippedDomainEvent extends DomainEvent {
   public static readonly eventName = "ops.order_shipped_domain_event";
 

@@ -9,5 +9,8 @@ export default defineConfig({
   adapter: node({ mode: "standalone" }),
   vite: {
     plugins: [tailwindcss()],
+    // Los comandos síncronos del back-office llegan con Host `app2`
+    // (DNS interno de compose, docs/07): el guard de Vite los bloquearía
+    server: { allowedHosts: ["app2"] },
   },
 });

@@ -2,6 +2,9 @@ parameters:
     # DSN por defecto de desarrollo (nombres de host de compose, docs/07)
     default_eventos_dsn: 'mysql://demo:demo@bbdd:3306/eventos'
     default_comercio_dsn: 'mysql://demo:demo@bbdd:3306/comercio'
+    default_ops_dsn: 'mysql://demo:demo@bbdd:3306/ops'
+    default_ops_api_base_url: 'http://app2:4321'
+    default_ops_api_token: 'change-me-ops'
 
 services:
     _defaults:
@@ -17,6 +20,10 @@ services:
         arguments:
             $dsn: '%env(default:default_comercio_dsn:COMERCIO_DSN)%'
 
+    App\Shared\Infrastructure\Persistence\OpsDoctrineConnection:
+        arguments:
+            $dsn: '%env(default:default_ops_dsn:OPS_DSN)%'
+
     # ── Bus de eventos sobre la cola (docs/04-06) ──────────────────────────
     App\Shared\Infrastructure\DomainEvent\MysqlDoctrineEventBus:
         arguments:
@@ -24,19 +31,34 @@ services:
 
     App\Shared\Domain\Event\EventBus: '@App\Shared\Infrastructure\DomainEvent\MysqlDoctrineEventBus'
 
-    # ── Dominio `ops`: repositorios de lectura sobre `comercio` ────────────
+    # ── Dominio `ops`: proyección de pedidos + fuente del catálogo ────────
     App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrdersRepository: ~
+    App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrderCommandsRepository: ~
+    App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrderProjectionRepository: ~
     App\Ops\Products\Infrastructure\Persistence\MysqlDoctrineProductsRepository: ~
 
     App\Ops\Orders\Domain\OrdersRepository: '@App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrdersRepository'
+    App\Ops\Orders\Domain\OrderCommandsRepository: '@App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrderCommandsRepository'
+    App\Ops\Orders\Domain\OrderProjectionRepository: '@App\Ops\Orders\Infrastructure\Persistence\MysqlDoctrineOrderProjectionRepository'
     App\Ops\Products\Domain\ProductsRepository: '@App\Ops\Products\Infrastructure\Persistence\MysqlDoctrineProductsRepository'
+
+    # ── Comando síncrono confirm/ship hacia app2 (docs/05) ────────────────
+    App\Ops\Orders\Infrastructure\OpsApiClient:
+        arguments:
+            $baseUrl: '%env(default:default_ops_api_base_url:OPS_API_BASE_URL)%'
+            $token: '%env(default:default_ops_api_token:OPS_API_TOKEN)%'
 
     App\Ops\Orders\Application\ConfirmOrder: ~
     App\Ops\Orders\Application\ShipOrder: ~
+    App\Ops\Products\Application\AddProduct: ~
+    App\Ops\Products\Application\UpdateProduct: ~
 
     # ── Suscriptores: el tag `subscriber` alimenta el sync-routing y el bus
     #    (se declara a mano, como el .addTag("subscriber") del diod de app2) ──
     App\Ops\Orders\Infrastructure\EventSubscriber\OrderConfirmationEmail:
+        tags: [{ name: 'subscriber' }]
+
+    App\Ops\Orders\Infrastructure\EventSubscriber\OrderProjection:
         tags: [{ name: 'subscriber' }]
 
     App\Ops\Products\Infrastructure\EventSubscriber\ProductStats:
