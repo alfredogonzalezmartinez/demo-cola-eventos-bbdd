@@ -74,11 +74,13 @@ cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/context
 
 **Objetivo**: el flujo de publicador real.
 
-- [ ] Contexto `commerce/orders` (aggregate `Order`, `OrderCreatedDomainEvent`, `MysqlOrderRepository`, caso `CheckoutOrder`)
-- [ ] `commerce/products` con `ProductViewedDomainEvent` + suscriptores de app2 (`UpdateOrderStatus`)
-- [ ] Página SSR de tienda + checkout + listado de pedidos con estados
+- [x] Contexto `commerce/orders` (aggregate `Order`, `OrderCreatedDomainEvent`, `MysqlOrderRepository`, caso `CheckoutOrder`)
+- [x] `commerce/products` con `ProductViewedDomainEvent` (suscriptores de app2: `UpdateOrderStatus`, se crean en la Fase 6 — el cierre de esta fase no exige consumidores)
+- [x] Página SSR de tienda + checkout + listado de pedidos con estados
 
 **Cierre**: un checkout inserta en `comercio.orders` y en `eventos.domain_events_to_consume` un evento `commerce.order_created`.
+
+> **✅ Estado (2026-10-25)**: cerrada — `make test` en verde (14/14: bus + sanity + `CheckoutOrder` + `ViewProduct` con MySQL real). Publicación en dos pasos como la referencia (docs/02 corregida en consecuencia); payload de los eventos según docs/04 (`camelCase`, `toPrimitives` incluye `id`). DDL: `orders`/`order_status_history` a `TIMESTAMP(6)` + seed de 3 productos en `databases/02-comercio.sql`. DI: `ComercioMysqlConnection` (DSN `MYSQL_COMERCIO_URL`, docs/07) como token junto a la conexión de `eventos`; repos y casos de uso registrados por factory en `diod.config`. UI (Q8): páginas SSR `index` (tienda), `products/[id]` (publica `product_viewed` por render, no incrementa `views` — el consumidor hace el UPDATE), `checkout` (form nativo POST → `/api/checkout`, redirect 303 → `/orders`) y `orders`; error del checkout genérico 500 (Q7). Suscripciones: ninguna en app2 — la cola no recibió filas en la demo manual (routing con 0 filas: correcto hasta la Fase 6). Config de tests: `fileParallelism: false` en `app2/vite.config.ts` (los `truncateAll` se cruzaban entre ficheros en paralelo; sin imports en la config porque `vitest`/`vite-plus` no son resolubles vía npx). Gotcha del contenedor: tras recrear el volumen hay `docker exec app2 npm install` **y reiniciar app2** (el `astro dev` ya en marcha mantiene caché de módulos podrido con los paquetes del estado previo). Node del host: v26 vía nvm (el node del sistema v16 no soporta el tooling).
 
 ## Fase 5 · E2E app2 (sin app1)
 
@@ -91,7 +93,7 @@ cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/context
 - [ ] Bundle `shared` en PHP: `DomainEvent`, `EventBus` (interfaz), `MysqlDoctrineEventBus` (o sobre PDO), atributo/interfaz `DomainEventSubscriber`
 - [ ] Sistema de tagging del DI por `subscriber` + comando `events:sync-routing`
 - [ ] Comando `events:consume` con el mismo algoritmo (SKIP LOCKED, retries=3, dead letter)
-- [ ] Suscriptores: `OrderConfirmationEmail` (order_created), `ProductStats` (product_viewed)
+- [ ] Suscriptores: `OrderConfirmationEmail` (order_created) y `ProductStats` (product_viewed) de app1, y `UpdateOrderStatus` de app2 (`order_confirmed`, `order_shipped`; aplazado aquí desde la Fase 4, ver [04](04-modelo-eventos.md#los-suscriptores))
 - [ ] Publicador de `ops.order_confirmed` / `ops.order_shipped` (back-office mínimo: comandos de consola sirven como UI de la demo)
 - [ ] Tests en PHP con el mismo enfoque (MySQL real de test)
 

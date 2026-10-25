@@ -64,7 +64,7 @@ sequenceDiagram
 
 | Pieza del escenario | Qué demuestra |
 |---------------------|---------------|
-| Checkout en app2 publica en la misma transacción que guarda el pedido | Patrón **outbox**: el evento no existe si el negocio no se completó |
+| Checkout en app2 guarda el pedido y después publica el evento (dos pasos como la referencia: el bus abre su propia transacción en `eventos`, ver [05-flujo-publicacion.md](05-flujo-publicacion.md)) | El evento no existe si el negocio no se completó; si el `publish` falla tras el save lo reintenta el bus (3×30ms). Transacción única dominio+cola (outbox real): mejora futura |
 | app1 recibe el evento segundos después vía cron | **Desacoplamiento temporal**: las apps no se conocen |
 | app1 responde publicando `order_confirmed` | Comunicación **bidireccional**: ambas apps son publicadora y consumidora |
 | `product_viewed` produce una escritura en la BD de dominio de app1 | Consumidores con **efectos de lectura/escritura sostenibles**, no solo emails falsos |

@@ -1,4 +1,8 @@
 -- Fase 0 · BD de la cola de eventos compartida (infraestructura, ver docs/04-modelo-eventos.md)
+-- El cliente del initdb corre con charset `auto` (latin1 en la práctica):
+-- SET NAMES fija la sesión para leer el fichero UTF-8 sin doble encode.
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS eventos;
 USE eventos;
 

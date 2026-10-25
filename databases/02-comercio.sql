@@ -1,4 +1,8 @@
 -- Fase 0 · BD de dominio del escenario e-commerce (ver docs/02-escenario-demo.md)
+-- El cliente del initdb corre con charset `auto` (latin1 en la práctica):
+-- SET NAMES fija la sesión para leer el fichero UTF-8 sin doble encode.
+SET NAMES utf8mb4;
+
 CREATE DATABASE IF NOT EXISTS comercio;
 USE comercio;
 
@@ -8,7 +12,7 @@ CREATE TABLE orders (
     total_amount   DECIMAL(10, 2) NOT NULL,
     total_currency CHAR(3) NOT NULL,
     status         ENUM('created', 'confirmed', 'shipped') NOT NULL DEFAULT 'created',
-    created_at     TIMESTAMP NOT NULL
+    created_at     TIMESTAMP(6) NOT NULL
 );
 
 CREATE TABLE order_items (
@@ -31,9 +35,16 @@ CREATE TABLE order_status_history (
     id         CHAR(36) PRIMARY KEY NOT NULL,
     order_id   CHAR(36) NOT NULL,
     status     VARCHAR(50) NOT NULL,
-    changed_at TIMESTAMP NOT NULL,
+    changed_at TIMESTAMP(6) NOT NULL,
     INDEX idx__order_status_history__order_id (order_id)
 );
 
 -- Acceso de las apps al dominio e-commerce
 GRANT ALL PRIVILEGES ON `comercio`.* TO 'demo'@'%';
+
+-- Seed de la demo (docs/02): catálogo fijo con precios en EUR.
+-- Se ejecuta sólo al recrear el volumen del contenedor (initdb).
+INSERT INTO products (id, name, price_amount, price_currency) VALUES
+    ('8d7a1c5b-45a3-4462-8804-2d454474c001', 'Teclado mecánico',   49.90, 'EUR'),
+    ('5f7e42b3-0e42-4bb3-8c6a-6a1c4fd3c002', 'Ratón inalámbrico', 24.50, 'EUR'),
+    ('c29e0774-1b46-4051-a2b8-72b7d4f0c003', 'Hub USB-C',          9.90, 'EUR');

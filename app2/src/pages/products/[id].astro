@@ -1,0 +1,55 @@
+---
+import "../../styles/global.css";
+
+import { container } from "../../contexts/shared/infrastructure/dependency-injection/diod.config";
+import { ViewProduct } from "../../contexts/commerce/products/application/ViewProduct";
+
+const productId = Astro.params.id as string;
+
+const productNotFound = `<html lang="es" class="bg-slate-950"><body class="bg-slate-950 text-slate-200 p-6 font-sans"><p class="text-slate-400">Producto no encontrado — <a href="/" class="text-sky-400 hover:underline">volver a la tienda</a></p></body></html>`;
+
+// Cada render SSR del detalle publica `commerce.product_viewed` (docs/02):
+// el incremento de `views` es trabajo del consumidor, no de app2 (Q9).
+const product = await container.get(ViewProduct).run(productId);
+
+if (!product) {
+  return new Response(productNotFound, {
+    status: 404,
+    headers: { "content-type": "text/html; charset=utf-8" },
+  });
+}
+
+const eur = (amount: number) => `€ ${amount.toFixed(2)}`;
+---
+
+<html lang="es" class="bg-slate-950">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>{product.name}</title>
+	</head>
+	<body class="bg-slate-950 text-slate-200 font-sans p-6 min-h-screen">
+		<main class="max-w-2xl mx-auto">
+			<p class="text-sm mb-4">
+				<a href="/" class="text-sky-400 hover:text-sky-300">← Tienda</a>
+			</p>
+
+			<div class="rounded-xl border border-slate-800 bg-slate-900/60 p-6">
+				<h1 class="text-2xl font-semibold text-white mb-2">{product.name}</h1>
+				<p class="text-sm text-slate-400 mb-4">Precio unitario</p>
+				<p class="text-3xl font-bold text-emerald-400 mb-4">{eur(product.priceAmount)}</p>
+				<p class="text-sm text-slate-500">
+					Vistas acumuladas:
+					<span class="bg-slate-800 text-slate-300 text-xs px-2 py-0.5 rounded-full">{product.views}</span>
+				</p>
+			</div>
+
+			<a
+				href="/checkout"
+				class="inline-block mt-4 bg-sky-600 hover:bg-sky-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+			>
+				Comprar
+			</a>
+		</main>
+	</body>
+</html>

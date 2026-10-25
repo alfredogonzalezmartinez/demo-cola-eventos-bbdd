@@ -1,0 +1,65 @@
+---
+import "../styles/global.css";
+
+import { container } from "../contexts/shared/infrastructure/dependency-injection/diod.config";
+import { MysqlOrderRepository } from "../contexts/commerce/orders/infrastructure/MysqlOrderRepository";
+
+const orders = await container.get(MysqlOrderRepository).searchAll();
+const eur = (amount: number) => `€ ${amount.toFixed(2)}`;
+
+// Estado → clases del badge del listado de pedidos
+const statusStyles: Record<string, string> = {
+  created: "bg-amber-500/10 text-amber-300",
+  confirmed: "bg-emerald-500/10 text-emerald-300",
+  shipped: "bg-sky-500/10 text-sky-300",
+};
+---
+
+<html lang="es" class="bg-slate-950">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>Pedidos</title>
+	</head>
+	<body class="bg-slate-950 text-slate-200 font-sans p-6 min-h-screen">
+		<main class="max-w-2xl mx-auto">
+			<p class="text-sm mb-4">
+				<a href="/" class="text-sky-400 hover:text-sky-300">← Tienda</a>
+			</p>
+
+			<h1 class="text-2xl font-semibold text-white mb-2">Pedidos</h1>
+			<p class="text-xs text-slate-500 mb-6">
+				Los estados confirmed/shipped los actualiza el consumidor de app2 al recibir eventos de app1
+			</p>
+
+			<table class="w-full text-left text-sm">
+				<thead class="text-xs uppercase text-slate-500 border-b border-slate-800">
+					<tr>
+						<th class="py-2">Pedido</th>
+						<th class="py-2">Email</th>
+						<th class="py-2 text-right">Total</th>
+						<th class="py-2 text-right">Estado</th>
+					</tr>
+				</thead>
+				<tbody>
+					{
+						orders.map((order) => (
+							<tr class="border-b border-slate-800/60 hover:bg-slate-900/60 transition-colors">
+								<td class="py-2.5 font-mono text-xs text-slate-400">{order.id}</td>
+								<td class="py-2.5">{order.email}</td>
+								<td class="py-2.5 text-right text-slate-300">{eur(order.totalAmount)}</td>
+								<td class="py-2.5 text-right">
+									<span
+										class={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${statusStyles[order.status] ?? "bg-slate-800 text-slate-400"}`}
+									>
+										{order.status}
+									</span>
+								</td>
+							</tr>
+						))
+					}
+				</tbody>
+			</table>
+		</main>
+	</body>
+</html>
