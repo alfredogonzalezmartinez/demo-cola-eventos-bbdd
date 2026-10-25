@@ -84,7 +84,9 @@ cd codely-ref && git sparse-checkout add 06-to_prod/2-multiples_apps/src/context
 
 ## Fase 5 · E2E app2 (sin app1)
 
-**Cierre de fase**: checkout → consume app2 (suscriptor `UpdateOrderStatus` dummy de prueba? no: en esta fase no hay eventos que lleguen a app2; validar publish de app2 e **inserciones en cola** + una ronda consume de prueba manual con un suscriptor temporal).
+**Cierre de fase**: demo E2E manual desde la UI, sin código permanente — checkout real → `make sync` (suscriptor temporal dummy, no commiteado) → ronda suelta `make consume-a2` → verificación por SQL de que la fila `order_created` aparece en `domain_events_to_consume` y desaparece tras el consume exitoso.
+
+> **✅ Estado (2026-10-25)**: cerrada — demo E2E completa con la cola limpia de origen (0 filas): suscriptor temporal `DummyOrderCreatedSubscriber` (nuevos ficheros + línea en `diod.config` revertidos tras la demo, instancia como criterio: misma interfaz `DomainEventSubscriber` que usará `UpdateOrderStatus` en la Fase 6); `make sync` inscribió `order_created → dummy` en routing; checkout real (2× Teclado mecánico, 99.80 EUR, pedido `a9ba8c9d-…`) dejó 1 fila en `domain_events_to_consume` con payload camelCase y `id` del agregado; una ronda `make consume-a2` consumió el evento (log 📥 → 🫥 dummy → fila borrada), dejando 0 pendientes y 0 dead letter. Descubrimiento clave: `publish` encola mirando las filas de `domain_events_routing` (no las clases del DI), por lo que el SSR del checkout no necesita conocer a los suscriptores — solo hace falta `make sync` antes de publish; el dummy entra en los scripts por proceso tsx nuevo sin reiniciar el dev server. Limpieza SQL tras la demo (routing del dummy) y suite en verde (14/14).
 
 ## Fase 6 · app1 (Symfony, replica del modelo)
 
